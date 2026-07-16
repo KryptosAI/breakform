@@ -192,6 +192,10 @@ The STEP importer (exl-step) reads ISO-10303-21 files:
 | GLB (.glb) | yes | yes |
 | EXL text (.exl) | yes | yes |
 | EXL binary (.exlb) | yes | yes |
+| meshio bridge (multiple: .msh, .e, .vtk, .vtu, .cgns, ...) | yes (mesh only) | yes (mesh only) |
+| Nastran (.bdf, .dat) | yes | — |
+| Abaqus (.inp) | yes | — |
+| OpenFOAM (case directory) | yes | — |
 
 ## Document root (`Document`)
 

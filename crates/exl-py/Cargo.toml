@@ -21,5 +21,8 @@ exl-step = { path = "../exl-step" }
 exl-gltf = { path = "../exl-gltf" }
 exl-diff = { path = "../exl-diff" }
 exl-validate = { path = "../exl-validate" }
+exl-nastran = { path = "../exl-nastran" }
+exl-abaqus = { path = "../exl-abaqus" }
+exl-openfoam = { path = "../exl-openfoam" }
 
 [workspace]

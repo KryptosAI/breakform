@@ -14,6 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Arrow IPC binary layout
 - Anchor integrations
 
+## [0.2.1] - 2026-07-16
+
+### Added
+- meshio Python bridge: 27 import formats + 28 export formats (ANSYS, Exodus, Gmsh, VTK/VTU, XDMF, CGNS, MED, and 20+ more)
+- Gmsh I/O plugin: import/export .exl directly in Gmsh mesher
+- FreeCAD workbench: Import/Export .exl + fidelity report viewer panel
+- `save_document` PyO3 binding for programmatic document creation
+- PyPI package: `pip install exl`
+
+### Changed
+- Python bindings dispatch: Nastran (.bdf/.dat), Abaqus (.inp), OpenFOAM case dirs
+- `exl.__init__.py` now a proper package with meshio bridge integration
+- bench extended to 69 corpus entries including Nastran/Abaqus/OpenFOAM fixtures
+
 ## [0.2.0] - 2026-07-15
 
 ### Added

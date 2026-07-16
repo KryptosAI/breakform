@@ -10,6 +10,7 @@
 **Break the format. Keep the truth.**
 
 [![CI](https://github.com/KryptosAI/breakform/actions/workflows/ci.yml/badge.svg)](https://github.com/KryptosAI/breakform/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/exl)](https://pypi.org/project/exl/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/KryptosAI/breakform/blob/main/LICENSE)
 
 Open interoperability layer for engineering data — schema, library, and CLI.
@@ -22,11 +23,12 @@ Breakform provides a vendor-neutral interchange format for 3D geometry (mesh + B
 - Zero-copy binary format (.exlb v2) — mmap-backed geometry buffers for solver ingestion
 - STEP import with multi-solid and assembly extraction
 - STL, OBJ, GLB round-trip conversion
+- meshio Python bridge: 27 import + 28 export mesh formats (ANSYS, Exodus, Gmsh, VTK/VTU, XDMF, CGNS, MED, and more)
 - Fidelity reports tracking entity-level conversion quality
 - Structured diff between two documents
 - Profile-based validation (mech, cfd, fea, strict)
 - Python bindings via PyO3/maturin
-- 50-model corpus for regression testing
+- 69-model corpus for regression testing
 - Benchmark dashboard
 
 ## Quickstart
@@ -55,6 +57,15 @@ make bench
 
 ## Python
 
+Quickstart:
+
+```bash
+pip install exl
+python -c "import exl; exl.convert('model.step', 'model.exl')"
+```
+
+Development install:
+
 ```bash
 cd crates/exl-py && maturin develop
 ```
@@ -77,6 +88,10 @@ exl.convert("input.step", "output.exl")
 | `exl-diff` | Structural diff between two documents |
 | `exl-validate` | Profile-based model validation (mech/cfd/fea/strict) |
 | `exl-py` | Python bindings |
+| `exl-nastran` | Nastran .bdf/.dat import/export |
+| `exl-abaqus` | Abaqus .inp import/export |
+| `exl-openfoam` | OpenFOAM case directory import/export |
+| `exl-arrow` | Arrow IPC binary layout |
 | `exl-cli` | `bf` CLI binary |
 
 ## Corpus
@@ -86,6 +101,11 @@ A 50-model regression corpus is maintained under `corpus/`. Generate it with:
 ```bash
 python scripts/gen_corpus.py
 ```
+
+## Integrations
+
+- [Gmsh plugin](integrations/gmsh/) — import/export .exl directly in the Gmsh mesher
+- [FreeCAD workbench](integrations/freecad/) — Import/Export .exl + fidelity report viewer panel
 
 ## Specification
 
