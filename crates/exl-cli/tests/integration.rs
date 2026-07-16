@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 static BIN: OnceLock<PathBuf> = OnceLock::new();
 
 fn bin() -> &'static PathBuf {
-    BIN.get_or_init(|| PathBuf::from(env!("CARGO_BIN_EXE_eng")))
+    BIN.get_or_init(|| PathBuf::from(env!("CARGO_BIN_EXE_bf")))
 }
 
 fn corpus_path(relative: &str) -> PathBuf {

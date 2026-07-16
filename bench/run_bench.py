@@ -22,8 +22,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BENCH_DIR = REPO_ROOT / "bench"
 CORPUS_DIR = REPO_ROOT / "corpus"
-TARGET_RELEASE = REPO_ROOT / "target" / "release" / "eng"
-TARGET_DEBUG = REPO_ROOT / "target" / "debug" / "eng"
+TARGET_RELEASE = REPO_ROOT / "target" / "release" / "bf"
+TARGET_DEBUG = REPO_ROOT / "target" / "debug" / "bf"
 RESULTS_PATH = BENCH_DIR / "results.json"
 DASHBOARD_PATH = BENCH_DIR / "index.html"
 
@@ -32,7 +32,7 @@ CORPUS_GLOBS = ["*.stl", "*.obj", "*.step", "*.stp", "*.glb"]
 
 
 def find_binary():
-    """Return path to eng binary. Prefer release, else debug."""
+    """Return path to bf binary. Prefer release, else debug."""
     if TARGET_RELEASE.exists():
         return str(TARGET_RELEASE)
     if TARGET_DEBUG.exists():
@@ -135,7 +135,7 @@ def parse_fidelity_json(path):
 
 
 def run_convert(binary, input_path, output_path, fidelity_path):
-    """Run eng convert. Returns (exit_code, wall_ms, stderr_text)."""
+    """Run bf convert. Returns (exit_code, wall_ms, stderr_text)."""
     args = [
         binary,
         "convert",
@@ -628,7 +628,7 @@ def main():
 
     binary = ensure_binary(skip_build=args.no_build)
     if not binary:
-        print("[bench] fatal: no eng binary found", file=sys.stderr)
+        print("[bench] fatal: no bf binary found", file=sys.stderr)
         sys.exit(1)
 
     files = gather_corpus_files()

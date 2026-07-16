@@ -1,6 +1,6 @@
 # bench
 
-Benchmark runner for the EXL `eng` CLI.  Converts every corpus file to `.exl`
+Benchmark runner for the `bf` CLI.  Converts every corpus file to `.exl`
 (and round-trips to `.exlb`), collects wall-clock timing and fidelity data,
 and produces a self-contained HTML dashboard.
 

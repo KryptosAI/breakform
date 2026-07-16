@@ -7,7 +7,12 @@ use exl_diff::diff;
 use exl_validate::{validate, Finding, Profile, Severity};
 
 #[derive(Parser)]
-#[command(name = "eng", about = "EXL interoperability CLI", version)]
+#[command(
+    name = "bf",
+    version = "0.2.0",
+    about = "Breakform — Break the format. Keep the truth.",
+    long_about = "Breakform — Break the format. Keep the truth.\n\nConvert, validate, diff, and inspect engineering data with honest fidelity reports."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -90,7 +95,7 @@ fn load_native(path: &PathBuf) -> Result<Document, String> {
             exl_io::load(path).map_err(|e| format!("failed to load {}: {}", path.display(), e))
         }
         _ => Err(format!(
-            "'{}' is not a native EXL file (.exl/.exlb). Convert it first with `eng convert`.",
+            "'{}' is not a native EXL file (.exl/.exlb). Convert it first with `bf convert`.",
             path.display()
         )),
     }

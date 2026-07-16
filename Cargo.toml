@@ -17,6 +17,9 @@ exclude = ["crates/exl-py"]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
+description = "Breakform: open interoperability layer for engineering data — break the format, keep the truth"
+repository = "https://github.com/KryptosAI/breakform"
+homepage = "https://github.com/KryptosAI/breakform"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

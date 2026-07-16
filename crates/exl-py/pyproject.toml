@@ -4,10 +4,16 @@ build-backend = "maturin"
 
 [project]
 name = "exl"
+description = "Python bindings for Breakform — open engineering-data interop with honest fidelity reports"
 requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Rust",
 ]
+
+[project.urls]
+repository = "https://github.com/KryptosAI/breakform"
+homepage = "https://github.com/KryptosAI/breakform"
 
 [tool.maturin]

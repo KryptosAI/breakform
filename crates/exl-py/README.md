@@ -1,6 +1,6 @@
 # exl-py
 
-Python bindings for the EXL engineering interchange format.
+Python bindings for Breakform — open engineering-data interop with honest fidelity reports.
 
 ## Build
 

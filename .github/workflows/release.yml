@@ -29,7 +29,7 @@ jobs:
       - name: rename binary
         shell: bash
         run: |
-          mv target/${{ matrix.target }}/release/eng target/${{ matrix.target }}/release/eng-${{ matrix.target }}
+          mv target/${{ matrix.target }}/release/bf target/${{ matrix.target }}/release/bf-${{ matrix.target }}
       - uses: softprops/action-gh-release@v2
         with:
-          files: target/${{ matrix.target }}/release/eng-${{ matrix.target }}
+          files: target/${{ matrix.target }}/release/bf-${{ matrix.target }}
