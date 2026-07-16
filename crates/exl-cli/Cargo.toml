@@ -16,5 +16,8 @@ exl-step = { workspace = true }
 exl-diff = { workspace = true }
 exl-validate = { workspace = true }
 exl-gltf = { workspace = true }
+exl-nastran = { workspace = true }
+exl-abaqus = { workspace = true }
+exl-openfoam = { workspace = true }
 serde_json = { workspace = true }
 clap = { version = "4", features = ["derive"] }

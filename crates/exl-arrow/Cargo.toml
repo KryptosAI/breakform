@@ -1,15 +1,12 @@
 [package]
-name = "exl-io"
+name = "exl-arrow"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-exl-core = { workspace = true }
-exl-arrow = { workspace = true }
+exl-geom = { workspace = true }
 arrow = { version = "59", default-features = false, features = ["ipc"] }
+exl-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
-bytemuck = "1"
-memmap2 = "0.9"

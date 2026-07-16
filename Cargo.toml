@@ -10,6 +10,10 @@ members = [
     "crates/exl-diff",
     "crates/exl-validate",
     "crates/exl-cli",
+    "crates/exl-nastran",
+    "crates/exl-abaqus",
+    "crates/exl-openfoam",
+    "crates/exl-arrow",
 ]
 exclude = ["crates/exl-py"]
 
@@ -27,6 +31,8 @@ serde_json = "1"
 blake3 = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 thiserror = "1"
+env_logger = "0.11"
+log = "0.4"
 exl-geom = { path = "crates/exl-geom" }
 exl-core = { path = "crates/exl-core" }
 exl-io = { path = "crates/exl-io" }
@@ -35,3 +41,7 @@ exl-gltf = { path = "crates/exl-gltf" }
 exl-step = { path = "crates/exl-step" }
 exl-diff = { path = "crates/exl-diff" }
 exl-validate = { path = "crates/exl-validate" }
+exl-nastran = { path = "crates/exl-nastran" }
+exl-abaqus = { path = "crates/exl-abaqus" }
+exl-openfoam = { path = "crates/exl-openfoam" }
+exl-arrow = { path = "crates/exl-arrow" }

@@ -1,9 +1,12 @@
+use arrow::ipc::reader::StreamReader;
+use arrow::ipc::writer::StreamWriter;
+use arrow::record_batch::RecordBatch;
 use exl_core::geom::Mesh;
 use exl_core::Document;
 use exl_core::GeometryPayload;
 use memmap2::Mmap;
 use serde::{Deserialize, Serialize};
-use std::io::Read;
+use std::io::{Cursor, Read};
 use std::path::Path;
 
 #[derive(Debug, thiserror::Error)]
@@ -21,6 +24,7 @@ pub enum IoError {
 const MAGIC: &[u8; 4] = b"EXLB";
 const BINARY_VERSION_V1: u8 = 1;
 const BINARY_VERSION_V2: u8 = 2;
+const BINARY_VERSION_V3: u8 = 3;
 
 #[derive(Serialize, Deserialize)]
 struct V2Json {
@@ -74,6 +78,11 @@ pub fn from_text(s: &str) -> Result<Document, IoError> {
 }
 
 pub fn to_binary(doc: &Document) -> Result<Vec<u8>, IoError> {
+    to_binary_v3(doc)
+}
+
+#[cfg(test)]
+fn to_binary_v2(doc: &Document) -> Result<Vec<u8>, IoError> {
     let mut buffers: Vec<Vec<u8>> = Vec::new();
     let mut mesh_entries: Vec<V2MeshEntry> = Vec::new();
     let mut mod_doc = doc.clone();
@@ -201,9 +210,10 @@ pub fn from_binary(bytes: &[u8]) -> Result<Document, IoError> {
     match version {
         BINARY_VERSION_V1 => from_binary_v1(bytes),
         BINARY_VERSION_V2 => from_binary_v2(bytes),
+        BINARY_VERSION_V3 => from_binary_v3(bytes),
         _ => Err(IoError::Parse(format!(
-            "unsupported binary version {}, expected {} or {}",
-            version, BINARY_VERSION_V1, BINARY_VERSION_V2
+            "unsupported binary version {}, expected {}, {}, or {}",
+            version, BINARY_VERSION_V1, BINARY_VERSION_V2, BINARY_VERSION_V3
         ))),
     }
 }
@@ -809,8 +819,133 @@ fn get_u32_slice<'a>(
     Ok(bytemuck::cast_slice(bytes))
 }
 
+#[cfg(test)]
 fn align_up(v: u64, align: u64) -> u64 {
     (v + align - 1) & !(align - 1)
+}
+
+fn to_binary_v3(doc: &Document) -> Result<Vec<u8>, IoError> {
+    let mut mesh_refs: Vec<(usize, &Mesh)> = Vec::new();
+    for (part_idx, part) in doc.parts.iter().enumerate() {
+        if let GeometryPayload::Mesh(ref mesh) = &part.geometry {
+            mesh_refs.push((part_idx, mesh));
+        }
+    }
+
+    let batches = exl_arrow::mesh_to_record_batches(&mesh_refs);
+
+    let mut mod_doc = doc.clone();
+    for part in mod_doc.parts.iter_mut() {
+        if let GeometryPayload::Mesh(ref mut mesh) = &mut part.geometry {
+            mesh.vertices.clear();
+            mesh.faces.clear();
+            mesh.normals = None;
+            mesh.uvs = None;
+            mesh.face_groups = None;
+        }
+    }
+
+    let mesh_entries: Vec<V2MeshEntry> = mesh_refs
+        .iter()
+        .map(|(part_idx, _)| V2MeshEntry {
+            part: *part_idx,
+            vertices: 0,
+            faces: 0,
+            normals: None,
+            uvs: None,
+            face_groups: None,
+        })
+        .collect();
+
+    let v2json = V2Json {
+        document: mod_doc,
+        meshes: mesh_entries,
+    };
+
+    let json_bytes = serde_json::to_vec(&v2json)?;
+    let json_offset: u64 = 24;
+    let json_len = json_bytes.len() as u64;
+
+    let mut arrow_buf = Cursor::new(Vec::new());
+    if !batches.is_empty() {
+        let first_schema = (*batches[0].schema()).clone();
+        let mut writer = StreamWriter::try_new(&mut arrow_buf, &first_schema)
+            .map_err(|e| IoError::Parse(format!("Arrow IPC writer creation: {}", e)))?;
+        for batch in &batches {
+            writer
+                .write(batch)
+                .map_err(|e| IoError::Parse(format!("Arrow IPC write: {}", e)))?;
+        }
+        writer
+            .finish()
+            .map_err(|e| IoError::Parse(format!("Arrow IPC finish: {}", e)))?;
+    }
+    let arrow_bytes = arrow_buf.into_inner();
+
+    let total = json_offset as usize + json_len as usize + arrow_bytes.len();
+    let mut out = Vec::with_capacity(total);
+
+    out.extend_from_slice(MAGIC);
+    out.push(BINARY_VERSION_V3);
+    out.extend_from_slice(&[0u8; 3]);
+    out.extend_from_slice(&json_offset.to_le_bytes());
+    out.extend_from_slice(&json_len.to_le_bytes());
+    out.extend_from_slice(&json_bytes);
+    out.extend_from_slice(&arrow_bytes);
+
+    Ok(out)
+}
+
+fn from_binary_v3(bytes: &[u8]) -> Result<Document, IoError> {
+    if bytes.len() < 24 {
+        return Err(IoError::Parse("v3 header too short".into()));
+    }
+    let json_offset = u64::from_le_bytes([
+        bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15],
+    ]);
+    let json_len = u64::from_le_bytes([
+        bytes[16], bytes[17], bytes[18], bytes[19], bytes[20], bytes[21], bytes[22], bytes[23],
+    ]);
+
+    let json_start = json_offset as usize;
+    let json_end = json_start + json_len as usize;
+    if json_end > bytes.len() {
+        return Err(IoError::Parse("json section beyond file".into()));
+    }
+    let json_slice = &bytes[json_start..json_end];
+    let v2json: V2Json = serde_json::from_slice(json_slice)?;
+    let mut doc = v2json.document;
+
+    let arrow_bytes = &bytes[json_end..];
+    if arrow_bytes.is_empty() {
+        return Ok(doc);
+    }
+
+    let cursor = Cursor::new(arrow_bytes.to_vec());
+    let reader = StreamReader::try_new(cursor, None)
+        .map_err(|e| IoError::Parse(format!("Arrow IPC reader: {}", e)))?;
+    let batches: Vec<RecordBatch> = reader
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| IoError::Parse(format!("Arrow IPC read batches: {}", e)))?;
+
+    let meshes = exl_arrow::record_batches_to_meshes(&batches);
+
+    for (part_idx, mesh) in meshes {
+        let part = doc
+            .parts
+            .get_mut(part_idx)
+            .ok_or_else(|| IoError::Parse("mesh part index out of bounds".into()))?;
+        let group_names = match &part.geometry {
+            GeometryPayload::Mesh(m) => m.group_names.clone(),
+            _ => Vec::new(),
+        };
+        part.geometry = GeometryPayload::Mesh(Mesh {
+            group_names,
+            ..mesh
+        });
+    }
+
+    Ok(doc)
 }
 
 #[cfg(test)]
@@ -1019,25 +1154,25 @@ mod tests {
     }
 
     #[test]
-    fn v2_round_trip_simple() {
+    fn v3_round_trip_simple() {
         let doc = test_doc();
         let data = to_binary(&doc).unwrap();
-        assert_eq!(data[4], BINARY_VERSION_V2);
+        assert_eq!(data[4], BINARY_VERSION_V3);
         let back = from_binary(&data).unwrap();
         assert_eq!(doc, back);
     }
 
     #[test]
-    fn v2_round_trip_multi_part() {
+    fn v3_round_trip_multi_part() {
         let doc = multi_part_doc();
         let data = to_binary(&doc).unwrap();
-        assert_eq!(data[4], BINARY_VERSION_V2);
+        assert_eq!(data[4], BINARY_VERSION_V3);
         let back = from_binary(&data).unwrap();
         assert_eq!(doc, back);
     }
 
     #[test]
-    fn v2_round_trip_multi_part_twice() {
+    fn v3_round_trip_multi_part_twice() {
         let doc = multi_part_doc();
         let data = to_binary(&doc).unwrap();
         let back1 = from_binary(&data).unwrap();
@@ -1045,6 +1180,24 @@ mod tests {
         assert_eq!(doc, back1);
         assert_eq!(doc, back2);
         assert_eq!(back1, back2);
+    }
+
+    #[test]
+    fn v2_round_trip_backward_compat() {
+        let doc = test_doc();
+        let data = to_binary_v2(&doc).unwrap();
+        assert_eq!(data[4], BINARY_VERSION_V2);
+        let back = from_binary(&data).unwrap();
+        assert_eq!(doc, back);
+    }
+
+    #[test]
+    fn v2_multi_part_backward_compat() {
+        let doc = multi_part_doc();
+        let data = to_binary_v2(&doc).unwrap();
+        assert_eq!(data[4], BINARY_VERSION_V2);
+        let back = from_binary(&data).unwrap();
+        assert_eq!(doc, back);
     }
 
     #[test]
@@ -1069,7 +1222,8 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
 
         let path = dir.join("test.exlb");
-        save(&doc, &path).unwrap();
+        let data = to_binary_v2(&doc).unwrap();
+        std::fs::write(&path, &data).unwrap();
 
         let mapped = MappedExlb::open(&path).unwrap();
         assert_eq!(mapped.mesh_count(), 1);
@@ -1115,7 +1269,8 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("test.exlb");
-        save(&doc, &path).unwrap();
+        let data = to_binary_v2(&doc).unwrap();
+        std::fs::write(&path, &data).unwrap();
 
         let mapped = MappedExlb::open(&path).unwrap();
         let view = mapped.mesh_view(0).unwrap();
@@ -1133,7 +1288,7 @@ mod tests {
     }
 
     #[test]
-    fn v2_empty_mesh_round_trip() {
+    fn v3_empty_mesh_round_trip() {
         let mesh = Mesh::default();
         let doc = Document::new(vec![Part::new("empty", GeometryPayload::Mesh(mesh))]);
         let data = to_binary(&doc).unwrap();
@@ -1142,9 +1297,18 @@ mod tests {
     }
 
     #[test]
+    fn v2_empty_mesh_backward_compat() {
+        let mesh = Mesh::default();
+        let doc = Document::new(vec![Part::new("empty", GeometryPayload::Mesh(mesh))]);
+        let data = to_binary_v2(&doc).unwrap();
+        let back = from_binary(&data).unwrap();
+        assert_eq!(doc, back);
+    }
+
+    #[test]
     fn v2_misaligned_buffer_rejected() {
         let doc = test_doc();
-        let mut data = to_binary(&doc).unwrap();
+        let mut data = to_binary_v2(&doc).unwrap();
 
         let buffer_count = u32::from_le_bytes([data[24], data[25], data[26], data[27]]) as usize;
         if buffer_count > 0 {
@@ -1179,7 +1343,7 @@ mod tests {
     #[test]
     fn v2_corrupt_buffer_table_rejected() {
         let doc = test_doc();
-        let mut data = to_binary(&doc).unwrap();
+        let mut data = to_binary_v2(&doc).unwrap();
         let buffer_count = u32::from_le_bytes([data[24], data[25], data[26], data[27]]) as usize;
         if buffer_count > 0 {
             let fake_end = data.len() as u64;
@@ -1197,7 +1361,8 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("test.exlb");
-        save(&doc, &path).unwrap();
+        let data = to_binary_v2(&doc).unwrap();
+        std::fs::write(&path, &data).unwrap();
 
         let mapped = MappedExlb::open(&path).unwrap();
         let meta = mapped.document_meta().unwrap();

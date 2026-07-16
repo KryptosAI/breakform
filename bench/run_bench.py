@@ -28,7 +28,7 @@ RESULTS_PATH = BENCH_DIR / "results.json"
 DASHBOARD_PATH = BENCH_DIR / "index.html"
 
 TIMEOUT_SEC = 30
-CORPUS_GLOBS = ["*.stl", "*.obj", "*.step", "*.stp", "*.glb"]
+CORPUS_GLOBS = ["*.stl", "*.obj", "*.step", "*.stp", "*.glb", "*.bdf", "*.dat", "*.inp"]
 
 
 def find_binary():
@@ -89,10 +89,13 @@ def ensure_binary(skip_build=False):
 
 
 def gather_corpus_files():
-    """Glob corpus/ for all supported formats. Returns list of Path objects sorted by name."""
+    """Glob corpus/ for all supported formats (files + OpenFOAM case dirs). Returns list of Path objects sorted by name."""
     files = []
     for pattern in CORPUS_GLOBS:
         files.extend(CORPUS_DIR.glob(pattern))
+    for d in sorted(CORPUS_DIR.iterdir()):
+        if d.is_dir() and (d / "constant" / "polyMesh").exists():
+            files.append(d)
     files.sort(key=lambda p: p.name.lower())
     return files
 
@@ -164,8 +167,10 @@ def run_convert(binary, input_path, output_path, fidelity_path):
 
 
 def format_from_suffix(path):
-    """Return canonical format string from file suffix."""
+    """Return canonical format string from file suffix or directory type."""
     suf = path.suffix.lower()
+    if path.is_dir() and (path / "constant" / "polyMesh").exists():
+        return "openfoam"
     if suf == ".stl":
         return "stl"
     if suf == ".obj":
@@ -174,6 +179,10 @@ def format_from_suffix(path):
         return "step"
     if suf == ".glb":
         return "glb"
+    if suf in (".bdf", ".dat"):
+        return "nastran"
+    if suf == ".inp":
+        return "abaqus"
     return suf.lstrip(".")
 
 

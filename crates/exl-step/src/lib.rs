@@ -26,6 +26,15 @@ enum StepValue {
     List(Vec<StepValue>),
     Null,
     Omitted,
+    Typed { name: String, value: Box<StepValue> },
+}
+
+fn unwrap_typed(v: &StepValue) -> &StepValue {
+    let mut cur = v;
+    while let StepValue::Typed { value, .. } = cur {
+        cur = value;
+    }
+    cur
 }
 
 struct Entity {
@@ -65,8 +74,14 @@ impl Parser {
     fn skip_ws(&mut self) {
         while self.pos < self.len {
             let c = self.chars[self.pos];
-            if c == '/' && self.pos + 1 < self.len && self.chars[self.pos + 1] == '*' {
-                self.skip_comment();
+            if c == '/' && self.pos + 1 < self.len {
+                if self.chars[self.pos + 1] == '*' {
+                    self.skip_comment();
+                } else if self.chars[self.pos + 1] == '/' {
+                    self.skip_line_comment();
+                } else {
+                    break;
+                }
             } else if c.is_whitespace() {
                 self.pos += 1;
             } else {
@@ -82,6 +97,13 @@ impl Parser {
                 self.pos += 2;
                 return;
             }
+            self.pos += 1;
+        }
+    }
+
+    fn skip_line_comment(&mut self) {
+        self.pos += 2;
+        while self.pos < self.len && self.chars[self.pos] != '\n' {
             self.pos += 1;
         }
     }
@@ -237,6 +259,24 @@ impl Parser {
                 let num = self.read_number()?;
                 Ok(StepValue::Number(num))
             }
+            Some(c) if c.is_ascii_alphabetic() || c == '_' => {
+                let name = self.read_entity_name()?;
+                self.skip_ws();
+                if self.peek() == Some('(') {
+                    self.advance();
+                    let inner = self.parse_value()?;
+                    self.skip_ws();
+                    if self.peek() == Some(')') {
+                        self.advance();
+                    }
+                    Ok(StepValue::Typed { name, value: Box::new(inner) })
+                } else {
+                    Err(StepError::Parse(format!(
+                        "unexpected identifier '{}' in value context at position {}",
+                        name, self.pos
+                    )))
+                }
+            }
             Some(c) => Err(StepError::Parse(format!(
                 "unexpected character '{}' at position {}",
                 c, self.pos
@@ -294,9 +334,9 @@ fn parse_header(content: &str) -> Result<(Option<String>, Option<String>), StepE
     Ok((model_name, schema))
 }
 
-fn parse_data_section(section: &str) -> Result<HashMap<String, Entity>, StepError> {
+fn parse_data_section(section: &str) -> Result<HashMap<String, Vec<Entity>>, StepError> {
     let mut parser = Parser::new(section);
-    let mut entities: HashMap<String, Entity> = HashMap::new();
+    let mut entities: HashMap<String, Vec<Entity>> = HashMap::new();
 
     loop {
         parser.skip_ws();
@@ -314,25 +354,66 @@ fn parse_data_section(section: &str) -> Result<HashMap<String, Entity>, StepErro
 
         parser.expect_str("=")?;
 
-        let name = parser.read_entity_name()?;
+        parser.skip_ws();
+        if parser.peek() == Some('(') {
+            parser.advance();
+            let mut sub_entities = Vec::new();
+            loop {
+                parser.skip_ws();
+                if parser.peek() == Some(')') || parser.peek().is_none() {
+                    break;
+                }
+                let sub_name = parser.read_entity_name()?;
+                parser.expect_str("(")?;
+                let args = parser.parse_arg_list_until_close()?;
+                sub_entities.push(Entity { name: sub_name, args });
+            }
+            if parser.peek() == Some(')') {
+                parser.advance();
+            }
+            parser.expect_str(";")?;
+            entities.insert(entity_id, sub_entities);
+        } else {
+            let name = parser.read_entity_name()?;
 
-        parser.expect_str("(")?;
+            parser.skip_ws();
+            parser.expect_str("(")?;
 
-        let args = parser.parse_arg_list_until_close()?;
+            let args = parser.parse_arg_list_until_close()?;
 
-        parser.expect_str(";")?;
+            parser.expect_str(";")?;
 
-        entities.insert(entity_id, Entity { name, args });
+            entities.insert(entity_id, vec![Entity { name, args }]);
+        }
     }
 
     Ok(entities)
 }
 
+fn find_entity_named<'a>(
+    entities: &'a HashMap<String, Vec<Entity>>,
+    id: &str,
+    name: &str,
+) -> Option<&'a Entity> {
+    entities.get(id)?.iter().find(|e| e.name == name)
+}
+
+fn first_entity_matching<'a, F>(
+    entities: &'a HashMap<String, Vec<Entity>>,
+    id: &str,
+    pred: F,
+) -> Option<&'a Entity>
+where
+    F: Fn(&str) -> bool,
+{
+    entities.get(id)?.iter().find(|e| pred(&e.name))
+}
+
 fn resolve_curve_type(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
     ref_id: &str,
 ) -> CurveType {
-    match entities.get(ref_id) {
+    match first_entity_matching(entities, ref_id, |_| true) {
         Some(entity) => match entity.name.as_str() {
             "LINE" => CurveType::Line,
             "CIRCLE" => CurveType::Circle,
@@ -345,10 +426,10 @@ fn resolve_curve_type(
 }
 
 fn resolve_surface_type(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
     ref_id: &str,
 ) -> SurfaceType {
-    match entities.get(ref_id) {
+    match first_entity_matching(entities, ref_id, |_| true) {
         Some(entity) => match entity.name.as_str() {
             "PLANE" => SurfaceType::Plane,
             "CYLINDRICAL_SURFACE" => SurfaceType::Cylinder,
@@ -364,7 +445,7 @@ fn resolve_surface_type(
 }
 
 fn extract_face_edges(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
     bounds: &StepValue,
 ) -> Vec<String> {
     let mut edge_ids = Vec::new();
@@ -385,25 +466,32 @@ fn extract_face_edges(
     };
 
     for bound_ref in &bound_refs {
-        if let Some(bound_entity) = entities.get(bound_ref) {
-            if bound_entity.args.len() < 2 {
-                continue;
-            }
-            if let StepValue::Ref(loop_ref) = &bound_entity.args[1] {
-                if let Some(loop_entity) = entities.get(loop_ref) {
-                    if loop_entity.args.len() < 2 {
-                        continue;
-                    }
-                    if let StepValue::List(oe_list) = &loop_entity.args[1] {
-                        for oe_val in oe_list {
-                            if let StepValue::Ref(oe_ref) = oe_val {
-                                if let Some(oe_entity) = entities.get(oe_ref) {
-                                    if oe_entity.args.len() < 4 {
-                                        continue;
-                                    }
-                                    if let StepValue::Ref(ec_ref) = &oe_entity.args[3]
-                                    {
-                                        edge_ids.push(ec_ref.clone());
+        if let Some(sub) = entities.get(bound_ref) {
+            for bound_entity in sub {
+                if bound_entity.args.len() < 2 {
+                    continue;
+                }
+                if let StepValue::Ref(loop_ref) = &bound_entity.args[1] {
+                    if let Some(sub2) = entities.get(loop_ref) {
+                        for loop_entity in sub2 {
+                            if loop_entity.args.len() < 2 {
+                                continue;
+                            }
+                            if let StepValue::List(oe_list) = &loop_entity.args[1] {
+                                for oe_val in oe_list {
+                                    if let StepValue::Ref(oe_ref) = oe_val {
+                                        if let Some(sub3) = entities.get(oe_ref) {
+                                            for oe_entity in sub3 {
+                                                if oe_entity.args.len() < 4 {
+                                                    continue;
+                                                }
+                                                if let StepValue::Ref(ec_ref) =
+                                                    &oe_entity.args[3]
+                                                {
+                                                    edge_ids.push(ec_ref.clone());
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -417,15 +505,15 @@ fn extract_face_edges(
     edge_ids
 }
 
-fn get_point(entities: &HashMap<String, Entity>, ref_id: &str) -> Option<[f64; 3]> {
-    let entity = entities.get(ref_id)?;
-    if entity.name == "CARTESIAN_POINT" && entity.args.len() >= 2 {
+fn get_point(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> Option<[f64; 3]> {
+    let entity = find_entity_named(entities, ref_id, "CARTESIAN_POINT")?;
+    if entity.args.len() >= 2 {
         if let StepValue::List(coords) = &entity.args[1] {
             if let (
                 StepValue::Number(x),
                 StepValue::Number(y),
                 StepValue::Number(z),
-            ) = (&coords[0], &coords[1], &coords[2])
+            ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
             {
                 return Some([*x, *y, *z]);
             }
@@ -434,15 +522,15 @@ fn get_point(entities: &HashMap<String, Entity>, ref_id: &str) -> Option<[f64; 3
     None
 }
 
-fn get_direction(entities: &HashMap<String, Entity>, ref_id: &str) -> Option<[f64; 3]> {
-    let entity = entities.get(ref_id)?;
-    if entity.name == "DIRECTION" && entity.args.len() >= 2 {
+fn get_direction(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> Option<[f64; 3]> {
+    let entity = find_entity_named(entities, ref_id, "DIRECTION")?;
+    if entity.args.len() >= 2 {
         if let StepValue::List(coords) = &entity.args[1] {
             if let (
                 StepValue::Number(x),
                 StepValue::Number(y),
                 StepValue::Number(z),
-            ) = (&coords[0], &coords[1], &coords[2])
+            ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
             {
                 return Some([*x, *y, *z]);
             }
@@ -451,8 +539,9 @@ fn get_direction(entities: &HashMap<String, Entity>, ref_id: &str) -> Option<[f6
     None
 }
 
-fn get_vector_direction(entities: &HashMap<String, Entity>, ref_id: &str) -> Option<[f64; 3]> {
-    let entity = entities.get(ref_id)?;
+fn get_vector_direction(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> Option<[f64; 3]> {
+    let entity = find_entity_named(entities, ref_id, "VECTOR")
+        .or_else(|| find_entity_named(entities, ref_id, "DIRECTION"))?;
     if entity.name == "VECTOR" && entity.args.len() >= 2 {
         if let StepValue::Ref(dir_ref) = &entity.args[1] {
             return get_direction(entities, dir_ref);
@@ -464,7 +553,7 @@ fn get_vector_direction(entities: &HashMap<String, Entity>, ref_id: &str) -> Opt
                 StepValue::Number(x),
                 StepValue::Number(y),
                 StepValue::Number(z),
-            ) = (&coords[0], &coords[1], &coords[2])
+            ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
             {
                 return Some([*x, *y, *z]);
             }
@@ -473,9 +562,9 @@ fn get_vector_direction(entities: &HashMap<String, Entity>, ref_id: &str) -> Opt
     None
 }
 
-fn get_axis2_placement(entities: &HashMap<String, Entity>, ref_id: &str) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
-    let entity = entities.get(ref_id)?;
-    if entity.name == "AXIS2_PLACEMENT_3D" && entity.args.len() >= 4 {
+fn get_axis2_placement(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
+    let entity = find_entity_named(entities, ref_id, "AXIS2_PLACEMENT_3D")?;
+    if entity.args.len() >= 4 {
         let origin = match &entity.args[1] {
             StepValue::Ref(pt_ref) => get_point(entities, pt_ref)?,
             _ => return None,
@@ -495,11 +584,11 @@ fn get_axis2_placement(entities: &HashMap<String, Entity>, ref_id: &str) -> Opti
 }
 
 fn resolve_surface_params(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
     surf_ref: &str,
     face_id: &str,
 ) -> Option<(String, SurfaceParams)> {
-    let entity = entities.get(surf_ref)?;
+    let entity = first_entity_matching(entities, surf_ref, |_| true)?;
     match entity.name.as_str() {
         "PLANE" => {
             if entity.args.len() >= 2 {
@@ -673,11 +762,11 @@ fn expand_knots(multiplicities: &[f64], knots: &[f64]) -> Vec<f64> {
 }
 
 fn resolve_curve_params(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
     curve_ref: &str,
     edge_id: &str,
 ) -> Option<(String, CurveParams)> {
-    let entity = entities.get(curve_ref)?;
+    let entity = first_entity_matching(entities, curve_ref, |_| true)?;
     match entity.name.as_str() {
         "LINE" => {
             if entity.args.len() >= 3 {
@@ -779,7 +868,7 @@ fn resolve_curve_params(
 }
 
 fn build_brep(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
 ) -> (BRep, Consumed, HashMap<String, usize>) {
     let mut points: HashMap<String, [f64; 3]> = HashMap::new();
     let mut vertices: Vec<BrepVertex> = Vec::new();
@@ -787,21 +876,25 @@ fn build_brep(
     let mut faces: Vec<BrepFace> = Vec::new();
 
     let mut entity_counts: HashMap<String, usize> = HashMap::new();
-    for (_, entity) in entities {
-        *entity_counts.entry(entity.name.clone()).or_insert(0) += 1;
+    for (_, sub) in entities {
+        for entity in sub {
+            *entity_counts.entry(entity.name.clone()).or_insert(0) += 1;
+        }
     }
 
-    for (id, entity) in entities {
-        if entity.name == "CARTESIAN_POINT" && entity.args.len() >= 2 {
-            if let StepValue::List(coords) = &entity.args[1] {
-                if coords.len() == 3 {
-                    if let (
-                        StepValue::Number(x),
-                        StepValue::Number(y),
-                        StepValue::Number(z),
-                    ) = (&coords[0], &coords[1], &coords[2])
-                    {
-                        points.insert(id.clone(), [*x, *y, *z]);
+    for (id, sub) in entities {
+        for entity in sub {
+            if entity.name == "CARTESIAN_POINT" && entity.args.len() >= 2 {
+                if let StepValue::List(coords) = &entity.args[1] {
+                    if coords.len() == 3 {
+                        if let (
+                            StepValue::Number(x),
+                            StepValue::Number(y),
+                            StepValue::Number(z),
+                        ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
+                        {
+                            points.insert(id.clone(), [*x, *y, *z]);
+                        }
                     }
                 }
             }
@@ -809,15 +902,17 @@ fn build_brep(
     }
 
     let mut consumed_verts = 0usize;
-    for (id, entity) in entities {
-        if entity.name == "VERTEX_POINT" && entity.args.len() >= 2 {
-            if let StepValue::Ref(pt_ref) = &entity.args[1] {
-                if let Some(&pt) = points.get(pt_ref) {
-                    vertices.push(BrepVertex {
-                        id: id.clone(),
-                        point: pt,
-                    });
-                    consumed_verts += 1;
+    for (id, sub) in entities {
+        for entity in sub {
+            if entity.name == "VERTEX_POINT" && entity.args.len() >= 2 {
+                if let StepValue::Ref(pt_ref) = &entity.args[1] {
+                    if let Some(&pt) = points.get(pt_ref) {
+                        vertices.push(BrepVertex {
+                            id: id.clone(),
+                            point: pt,
+                        });
+                        consumed_verts += 1;
+                    }
                 }
             }
         }
@@ -825,21 +920,23 @@ fn build_brep(
 
     let mut consumed_edges = 0usize;
     let mut curve_params = BTreeMap::new();
-    for (id, entity) in entities {
-        if entity.name == "EDGE_CURVE" && entity.args.len() >= 4 {
-            if let (StepValue::Ref(v1), StepValue::Ref(v2), StepValue::Ref(curve_ref)) =
-                (&entity.args[1], &entity.args[2], &entity.args[3])
-            {
-                let curve_type = resolve_curve_type(entities, curve_ref);
-                edges.push(BrepEdge {
-                    id: id.clone(),
-                    curve: curve_type,
-                    vertices: [v1.clone(), v2.clone()],
-                });
-                if let Some((key, cp)) = resolve_curve_params(entities, curve_ref, id) {
-                    curve_params.insert(key, cp);
+    for (id, sub) in entities {
+        for entity in sub {
+            if entity.name == "EDGE_CURVE" && entity.args.len() >= 4 {
+                if let (StepValue::Ref(v1), StepValue::Ref(v2), StepValue::Ref(curve_ref)) =
+                    (&entity.args[1], &entity.args[2], &entity.args[3])
+                {
+                    let curve_type = resolve_curve_type(entities, curve_ref);
+                    edges.push(BrepEdge {
+                        id: id.clone(),
+                        curve: curve_type,
+                        vertices: [v1.clone(), v2.clone()],
+                    });
+                    if let Some((key, cp)) = resolve_curve_params(entities, curve_ref, id) {
+                        curve_params.insert(key, cp);
+                    }
+                    consumed_edges += 1;
                 }
-                consumed_edges += 1;
             }
         }
     }
@@ -847,27 +944,29 @@ fn build_brep(
     let mut consumed_faces = 0usize;
     let mut surface_params = BTreeMap::new();
     let mut face_surf_map: HashMap<String, String> = HashMap::new();
-    for (id, entity) in entities {
-        if entity.name == "ADVANCED_FACE" && entity.args.len() >= 3 {
-            let surface_type = if let StepValue::Ref(surf_ref) = &entity.args[2] {
-                let st = resolve_surface_type(entities, surf_ref);
-                if let Some((key, sp)) = resolve_surface_params(entities, surf_ref, id) {
-                    surface_params.insert(key, sp);
-                }
-                face_surf_map.insert(id.clone(), surf_ref.clone());
-                st
-            } else {
-                SurfaceType::Other
-            };
+    for (id, sub) in entities {
+        for entity in sub {
+            if entity.name == "ADVANCED_FACE" && entity.args.len() >= 3 {
+                let surface_type = if let StepValue::Ref(surf_ref) = &entity.args[2] {
+                    let st = resolve_surface_type(entities, surf_ref);
+                    if let Some((key, sp)) = resolve_surface_params(entities, surf_ref, id) {
+                        surface_params.insert(key, sp);
+                    }
+                    face_surf_map.insert(id.clone(), surf_ref.clone());
+                    st
+                } else {
+                    SurfaceType::Other
+                };
 
-            let edge_refs = extract_face_edges(entities, &entity.args[1]);
+                let edge_refs = extract_face_edges(entities, &entity.args[1]);
 
-            faces.push(BrepFace {
-                id: id.clone(),
-                surface: surface_type,
-                edges: edge_refs,
-            });
-            consumed_faces += 1;
+                faces.push(BrepFace {
+                    id: id.clone(),
+                    surface: surface_type,
+                    edges: edge_refs,
+                });
+                consumed_faces += 1;
+            }
         }
     }
 
@@ -891,31 +990,33 @@ fn build_brep(
 }
 
 fn find_solid_face_groups(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
 ) -> Vec<(String, Vec<String>)> {
     let mut solids: Vec<(String, Vec<String>)> = Vec::new();
-    for (_id, entity) in entities {
-        if entity.name == "MANIFOLD_SOLID_BREP" && entity.args.len() >= 2 {
-            let solid_name = if let StepValue::Str(ref s) = entity.args[0] {
-                if s.is_empty() { format!("solid_{}", solids.len() + 1) } else { s.clone() }
-            } else {
-                format!("solid_{}", solids.len() + 1)
-            };
-            let shell_ref = if let StepValue::Ref(ref r) = entity.args[1] {
-                r.clone()
-            } else {
-                continue;
-            };
-            if let Some(shell_entity) = entities.get(&shell_ref) {
-                if shell_entity.name == "CLOSED_SHELL" && shell_entity.args.len() >= 2 {
-                    if let StepValue::List(face_refs) = &shell_entity.args[1] {
-                        let face_ids: Vec<String> = face_refs
-                            .iter()
-                            .filter_map(|v| {
-                                if let StepValue::Ref(r) = v { Some(r.clone()) } else { None }
-                            })
-                            .collect();
-                        solids.push((solid_name, face_ids));
+    for (_id, sub) in entities {
+        for entity in sub {
+            if entity.name == "MANIFOLD_SOLID_BREP" && entity.args.len() >= 2 {
+                let solid_name = if let StepValue::Str(ref s) = entity.args[0] {
+                    if s.is_empty() { format!("solid_{}", solids.len() + 1) } else { s.clone() }
+                } else {
+                    format!("solid_{}", solids.len() + 1)
+                };
+                let shell_ref = if let StepValue::Ref(ref r) = entity.args[1] {
+                    r.clone()
+                } else {
+                    continue;
+                };
+                if let Some(shell_entity) = find_entity_named(entities, &shell_ref, "CLOSED_SHELL") {
+                    if shell_entity.args.len() >= 2 {
+                        if let StepValue::List(face_refs) = &shell_entity.args[1] {
+                            let face_ids: Vec<String> = face_refs
+                                .iter()
+                                .filter_map(|v| {
+                                    if let StepValue::Ref(r) = v { Some(r.clone()) } else { None }
+                                })
+                                .collect();
+                            solids.push((solid_name, face_ids));
+                        }
                     }
                 }
             }
@@ -982,23 +1083,25 @@ fn filter_brep_for_faces(full_brep: &BRep, face_ids: &[String]) -> BRep {
 }
 
 fn resolve_product_name_from_def(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
     prod_def_ref: &str,
 ) -> Option<String> {
-    let prod_def = entities.get(prod_def_ref)?;
-    if prod_def.name == "PRODUCT_DEFINITION" && prod_def.args.len() >= 3 {
+    let prod_def = find_entity_named(entities, prod_def_ref, "PRODUCT_DEFINITION")?;
+    if prod_def.args.len() >= 3 {
         if let StepValue::Ref(form_ref) = &prod_def.args[2] {
             let form = entities.get(form_ref)?;
-            if form.name == "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE"
-                || form.name == "PRODUCT_DEFINITION_FORMATION"
-            {
-                if form.args.len() >= 3 {
-                    if let StepValue::Ref(prod_ref) = &form.args[2] {
-                        let product = entities.get(prod_ref)?;
-                        if product.name == "PRODUCT" && product.args.len() >= 2 {
-                            if let StepValue::Str(name) = &product.args[1] {
-                                if !name.is_empty() {
-                                    return Some(name.clone());
+            for fe in form {
+                if fe.name == "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE"
+                    || fe.name == "PRODUCT_DEFINITION_FORMATION"
+                {
+                    if fe.args.len() >= 3 {
+                        if let StepValue::Ref(prod_ref) = &fe.args[2] {
+                            let product = find_entity_named(entities, prod_ref, "PRODUCT")?;
+                            if product.args.len() >= 2 {
+                                if let StepValue::Str(name) = &product.args[1] {
+                                    if !name.is_empty() {
+                                        return Some(name.clone());
+                                    }
                                 }
                             }
                         }
@@ -1011,58 +1114,67 @@ fn resolve_product_name_from_def(
 }
 
 fn parse_assembly_instances(
-    entities: &HashMap<String, Entity>,
+    entities: &HashMap<String, Vec<Entity>>,
     parts: &[Part],
 ) -> Vec<Instance> {
     let mut instances: Vec<Instance> = Vec::new();
 
-    for (_id, entity) in entities {
-        if entity.name != "NEXT_ASSEMBLY_USAGE_OCCURRENCE" {
-            continue;
-        }
-        if entity.args.len() < 6 {
-            continue;
-        }
-        let name = match &entity.args[1] {
-            StepValue::Str(s) => s.clone(),
-            _ => continue,
-        };
-        let child_prod_def_ref = match &entity.args[4] {
-            StepValue::Ref(r) => r.clone(),
-            _ => continue,
-        };
+    for (_id, sub) in entities {
+        for entity in sub {
+            if entity.name != "NEXT_ASSEMBLY_USAGE_OCCURRENCE" {
+                continue;
+            }
+            if entity.args.len() < 6 {
+                continue;
+            }
+            let name = match &entity.args[1] {
+                StepValue::Str(s) => s.clone(),
+                _ => continue,
+            };
+            let child_prod_def_ref = match &entity.args[4] {
+                StepValue::Ref(r) => r.clone(),
+                _ => continue,
+            };
 
-        let child_product_name = resolve_product_name_from_def(entities, &child_prod_def_ref)
-            .unwrap_or_else(|| name.clone());
+            let child_product_name = resolve_product_name_from_def(entities, &child_prod_def_ref)
+                .unwrap_or_else(|| name.clone());
 
-        let mut transform = Transform::identity();
+            let mut transform = Transform::identity();
 
-        for (_, rel_entity) in entities {
-            if rel_entity.name == "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION"
-                && rel_entity.args.len() >= 3
-            {
-                if let StepValue::Ref(srr_ref) = &rel_entity.args[1] {
-                    if let Some(srr) = entities.get(srr_ref) {
-                        if srr.name == "SHAPE_REPRESENTATION_RELATIONSHIP"
-                            && srr.args.len() >= 5
-                        {
-                                if let StepValue::Ref(rep1_ref) = &srr.args[3] {
-                                    if let StepValue::Ref(rep2_ref) = &srr.args[4] {
-                                        if rep1_ref.as_str() == child_prod_def_ref.as_str()
-                                            || rep2_ref.as_str() == child_prod_def_ref.as_str()
-                                        {
-                                        if let StepValue::Ref(idt_ref) = &rel_entity.args[2] {
-                                            if let Some(idt) = entities.get(idt_ref) {
-                                                if idt.name == "ITEM_DEFINED_TRANSFORMATION"
-                                                    && idt.args.len() >= 4
+            for (_, rel_sub) in entities {
+                for rel_entity in rel_sub {
+                    if rel_entity.name == "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION"
+                        && rel_entity.args.len() >= 3
+                    {
+                        if let StepValue::Ref(srr_ref) = &rel_entity.args[1] {
+                            if let Some(srr) = find_entity_named(entities, srr_ref, "SHAPE_REPRESENTATION_RELATIONSHIP") {
+                                if srr.args.len() >= 5 {
+                                    if let StepValue::Ref(rep1_ref) = &srr.args[3] {
+                                        if let StepValue::Ref(rep2_ref) = &srr.args[4] {
+                                            if rep1_ref.as_str() == child_prod_def_ref.as_str()
+                                                || rep2_ref.as_str() == child_prod_def_ref.as_str()
+                                            {
+                                                if let StepValue::Ref(idt_ref) = &rel_entity.args[2]
                                                 {
-                                                    if let StepValue::Ref(ax2_ref) = &idt.args[3] {
-                                                        if let Some((origin, _axis, _ref_dir)) =
-                                                            get_axis2_placement(entities, ax2_ref)
-                                                        {
-                                                            transform.0[0][3] = origin[0];
-                                                            transform.0[1][3] = origin[1];
-                                                            transform.0[2][3] = origin[2];
+                                                    if let Some(idt) = find_entity_named(entities, idt_ref, "ITEM_DEFINED_TRANSFORMATION") {
+                                                        if idt.args.len() >= 4 {
+                                                            if let StepValue::Ref(ax2_ref) =
+                                                                &idt.args[3]
+                                                            {
+                                                                if let Some(
+                                                                    (origin, _axis, _ref_dir),
+                                                                ) = get_axis2_placement(
+                                                                    entities,
+                                                                    ax2_ref,
+                                                                ) {
+                                                                    transform.0[0][3] =
+                                                                        origin[0];
+                                                                    transform.0[1][3] =
+                                                                        origin[1];
+                                                                    transform.0[2][3] =
+                                                                        origin[2];
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -1075,31 +1187,33 @@ fn parse_assembly_instances(
                     }
                 }
             }
+
+            let part_ref = parts
+                .iter()
+                .find(|p| p.name == child_product_name)
+                .map(|p| p.name.clone())
+                .unwrap_or_else(|| child_product_name);
+
+            instances.push(Instance {
+                part_ref,
+                name,
+                transform,
+            });
         }
-
-        let part_ref = parts
-            .iter()
-            .find(|p| p.name == child_product_name)
-            .map(|p| p.name.clone())
-            .unwrap_or_else(|| child_product_name);
-
-        instances.push(Instance {
-            part_ref,
-            name,
-            transform,
-        });
     }
 
     instances
 }
 
-fn resolve_product_names(entities: &HashMap<String, Entity>) -> HashMap<String, String> {
+fn resolve_product_names(entities: &HashMap<String, Vec<Entity>>) -> HashMap<String, String> {
     let mut product_names: HashMap<String, String> = HashMap::new();
-    for (_id, entity) in entities {
-        if entity.name == "PRODUCT" && entity.args.len() >= 2 {
-            if let StepValue::Str(name) = &entity.args[1] {
-                if !name.is_empty() {
-                    product_names.insert(_id.clone(), name.clone());
+    for (id, sub) in entities {
+        for entity in sub {
+            if entity.name == "PRODUCT" && entity.args.len() >= 2 {
+                if let StepValue::Str(name) = &entity.args[1] {
+                    if !name.is_empty() {
+                        product_names.insert(id.clone(), name.clone());
+                    }
                 }
             }
         }
@@ -1979,5 +2093,134 @@ END-ISO-10303-21;
             .join("../../corpus/42-bspline.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 42-bspline.step failed: {:?}", result.err());
+    }
+
+    const COMPLEX_ENTITY_STEP: &str = r#"ISO-10303-21;
+HEADER;
+FILE_NAME('complex test','','','','','','');
+FILE_SCHEMA(('TEST'));
+ENDSEC;
+DATA;
+#1 = (LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));
+#2 = CARTESIAN_POINT('',(1.0,2.0,3.0));
+#3 = VERTEX_POINT('',#2);
+ENDSEC;
+END-ISO-10303-21;
+"#;
+
+    #[test]
+    fn complex_entity_parses_sub_entities() {
+        let path = write_test_file("complex_entity.stp", COMPLEX_ENTITY_STEP);
+        let (doc, _report) = import_step(&path).unwrap();
+
+        assert_eq!(doc.parts.len(), 1);
+
+        let path2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/42-bspline.step");
+        let content = std::fs::read_to_string(&path2).unwrap();
+        let data_section = super::extract_section(&content, "DATA;").unwrap();
+        assert!(!data_section.is_empty());
+    }
+
+    const TYPED_VALUE_STEP: &str = r#"ISO-10303-21;
+HEADER;
+FILE_NAME('typed test','','','','','','');
+FILE_SCHEMA(('TEST'));
+ENDSEC;
+DATA;
+#1 = CARTESIAN_POINT('',(1.0,2.0,3.0));
+#2 = VERTEX_POINT('',#1);
+#3 = MEASURE_REPRESENTATION_ITEM('volume measure',VOLUME_MEASURE(355877.882829),#411);
+#4 = CARTESIAN_POINT('',(4.0,5.0,6.0));
+#5 = VERTEX_POINT('',#4);
+ENDSEC;
+END-ISO-10303-21;
+"#;
+
+    #[test]
+    fn typed_value_parses_in_args() {
+        let path = write_test_file("typed_value.stp", TYPED_VALUE_STEP);
+        let result = import_step(&path);
+        assert!(result.is_ok(), "typed value import failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_60() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/60-real-sg1-c5-214.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 60 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_61() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/61-real-io1-cm-214.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 61 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_62() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/62-real-dm1-id-214.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 62 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_63() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/63-real-ats1-out.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 63 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_64() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/64-real-ats2-out.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 64 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_65() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/65-real-ats3-out.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 65 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_66() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/66-real-ats4-out.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 66 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_67() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/67-real-ats7-out.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 67 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_68() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/68-real-screw.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 68 failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn import_corpus_69() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/69-real-as1-oc-214.step");
+        let result = import_step(&path);
+        assert!(result.is_ok(), "import of 69 failed: {:?}", result.err());
     }
 }

@@ -81,10 +81,24 @@ fn import_doc(input: &PathBuf) -> Result<(Document, Option<exl_core::FidelityRep
         "glb" => exl_gltf::import_gltf(input)
             .map(|(d, r)| (d, Some(r)))
             .map_err(|e| format!("failed to import gltf: {}", e)),
-        _ => Err(format!(
-            "unknown input extension '{}' — expected .exl, .exlb, .step, .stp, .stl, .obj, or .glb",
-            ext
-        )),
+        "bdf" | "dat" => exl_nastran::import_nastran(input)
+            .map(|(d, r)| (d, Some(r)))
+            .map_err(|e| format!("failed to import nastran: {}", e)),
+        "inp" => exl_abaqus::import_abaqus(input)
+            .map(|(d, r)| (d, Some(r)))
+            .map_err(|e| format!("failed to import abaqus: {}", e)),
+        _ => {
+            if input.is_dir() && input.join("constant").join("polyMesh").exists() {
+                exl_openfoam::import_openfoam(input)
+                    .map(|(d, r)| (d, Some(r)))
+                    .map_err(|e| format!("failed to import openfoam: {}", e))
+            } else {
+                Err(format!(
+                    "unknown input format for '{}' — expected .exl, .exlb, .step, .stp, .stl, .obj, .glb, .bdf, .dat, .inp, or an OpenFOAM case directory",
+                    ext
+                ))
+            }
+        }
     }
 }
 
