@@ -1151,7 +1151,18 @@ def _step_bspline(desc="bspline", fname="bspline.step"):
         u_degree, v_degree, cp_grid,
         u_multi, v_multi, u_knots, v_knots,
     )
-    shape = b.add_shape_representation([srf])
+    corners = [cp_grid[0][0], cp_grid[2][0], cp_grid[2][3], cp_grid[0][3]]
+    verts = [b.add_vertex_point(p) for p in corners]
+    oedges = []
+    for i in range(4):
+        d = b.add_direction(1, 0, 0)
+        line = b.add_line(corners[i], d)
+        e = b.add_edge_curve(verts[i], verts[(i + 1) % 4], line)
+        oedges.append(b.add_oriented_edge(e))
+    loop = b.add_edge_loop(oedges)
+    bound = b.add_face_outer_bound(loop)
+    face = b.add_advanced_face([bound], srf)
+    shape = b.add_shape_representation([srf, face])
     prod = b.add_product(desc, desc, shape)
     _ = prod
     return b.build()

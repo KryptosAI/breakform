@@ -1,0 +1,21 @@
+[package]
+name = "exl-py"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "exl"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["abi3-py39"] }
+serde_json = "1"
+exl-core = { path = "../exl-core" }
+exl-io = { path = "../exl-io" }
+exl-fmt = { path = "../exl-fmt" }
+exl-step = { path = "../exl-step" }
+exl-gltf = { path = "../exl-gltf" }
+exl-diff = { path = "../exl-diff" }
+exl-validate = { path = "../exl-validate" }
+
+[workspace]

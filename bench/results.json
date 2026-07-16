@@ -1,0 +1,946 @@
+{
+  "generated_iso": "2026-07-16T01:07:53.039654+00:00",
+  "toolchain": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+  "results": [
+    {
+      "file": "01-box-ascii.stl",
+      "format": "stl",
+      "size_bytes": 2496,
+      "wall_ms": 3.11,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.44
+    },
+    {
+      "file": "02-box-binary.stl",
+      "format": "stl",
+      "size_bytes": 684,
+      "wall_ms": 2.38,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.24
+    },
+    {
+      "file": "03-icosphere-sub2-ascii.stl",
+      "format": "stl",
+      "size_bytes": 65798,
+      "wall_ms": 3.32,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 482,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.68
+    },
+    {
+      "file": "04-icosphere-sub2-binary.stl",
+      "format": "stl",
+      "size_bytes": 16084,
+      "wall_ms": 2.56,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 482,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.42
+    },
+    {
+      "file": "05-cylinder-16-ascii.stl",
+      "format": "stl",
+      "size_bytes": 13153,
+      "wall_ms": 2.4,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 98,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.26
+    },
+    {
+      "file": "06-cylinder-64-ascii.stl",
+      "format": "stl",
+      "size_bytes": 52537,
+      "wall_ms": 2.73,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 386,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.76
+    },
+    {
+      "file": "07-cone-ascii.stl",
+      "format": "stl",
+      "size_bytes": 9895,
+      "wall_ms": 2.38,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 74,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.21
+    },
+    {
+      "file": "08-torus-ascii.stl",
+      "format": "stl",
+      "size_bytes": 118467,
+      "wall_ms": 3.06,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 864,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.18
+    },
+    {
+      "file": "09-lbracket-ascii.stl",
+      "format": "stl",
+      "size_bytes": 7015,
+      "wall_ms": 2.14,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 50,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.5
+    },
+    {
+      "file": "10-plate-ascii.stl",
+      "format": "stl",
+      "size_bytes": 2488,
+      "wall_ms": 2.52,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.1
+    },
+    {
+      "file": "11-open-box-ascii.stl",
+      "format": "stl",
+      "size_bytes": 2081,
+      "wall_ms": 2.19,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 18,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.2
+    },
+    {
+      "file": "12-degenerate-ascii.stl",
+      "format": "stl",
+      "size_bytes": 1440,
+      "wall_ms": 2.24,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 13,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 1.96
+    },
+    {
+      "file": "13-icosphere-10k-binary.stl",
+      "format": "stl",
+      "size_bytes": 1024084,
+      "wall_ms": 9.98,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 30722,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 5.15
+    },
+    {
+      "file": "14-sphere-ascii.stl",
+      "format": "stl",
+      "size_bytes": 108613,
+      "wall_ms": 3.02,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 794,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.64
+    },
+    {
+      "file": "15-thin-plate-binary.stl",
+      "format": "stl",
+      "size_bytes": 684,
+      "wall_ms": 2.12,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.05
+    },
+    {
+      "file": "16-lbracket-binary.stl",
+      "format": "stl",
+      "size_bytes": 1784,
+      "wall_ms": 2.24,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 50,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.03
+    },
+    {
+      "file": "18-box.obj",
+      "format": "obj",
+      "size_bytes": 346,
+      "wall_ms": 2.14,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.08
+    },
+    {
+      "file": "19-icosphere.obj",
+      "format": "obj",
+      "size_bytes": 8774,
+      "wall_ms": 2.65,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 482,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.15
+    },
+    {
+      "file": "20-cylinder.obj",
+      "format": "obj",
+      "size_bytes": 1681,
+      "wall_ms": 2.2,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 98,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.13
+    },
+    {
+      "file": "21-cone.obj",
+      "format": "obj",
+      "size_bytes": 1281,
+      "wall_ms": 2.25,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 74,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.06
+    },
+    {
+      "file": "22-torus.obj",
+      "format": "obj",
+      "size_bytes": 16172,
+      "wall_ms": 2.45,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 864,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.44
+    },
+    {
+      "file": "23-quads-only.obj",
+      "format": "obj",
+      "size_bytes": 317,
+      "wall_ms": 2.2,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.03
+    },
+    {
+      "file": "24-mixed-tri-quad.obj",
+      "format": "obj",
+      "size_bytes": 365,
+      "wall_ms": 2.05,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 24,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.06
+    },
+    {
+      "file": "25-negative-index.obj",
+      "format": "obj",
+      "size_bytes": 393,
+      "wall_ms": 2.11,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.0
+    },
+    {
+      "file": "26-multi-group.obj",
+      "format": "obj",
+      "size_bytes": 1137,
+      "wall_ms": 2.17,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 60,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.58
+    },
+    {
+      "file": "27-vn-vt.obj",
+      "format": "obj",
+      "size_bytes": 2424,
+      "wall_ms": 2.37,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 48,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.03
+    },
+    {
+      "file": "28-usemtl.obj",
+      "format": "obj",
+      "size_bytes": 389,
+      "wall_ms": 2.16,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.08
+    },
+    {
+      "file": "29-10k.obj",
+      "format": "obj",
+      "size_bytes": 655181,
+      "wall_ms": 16.02,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 30722,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 8.67
+    },
+    {
+      "file": "30-lbracket.obj",
+      "format": "obj",
+      "size_bytes": 818,
+      "wall_ms": 5.01,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 50,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.34
+    },
+    {
+      "file": "31-plate.obj",
+      "format": "obj",
+      "size_bytes": 348,
+      "wall_ms": 2.25,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.11
+    },
+    {
+      "file": "32-no-trailing-newline.obj",
+      "format": "obj",
+      "size_bytes": 352,
+      "wall_ms": 2.58,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.69
+    },
+    {
+      "file": "33-box.step",
+      "format": "step",
+      "size_bytes": 6663,
+      "wall_ms": 2.57,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 164,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.25
+    },
+    {
+      "file": "34-box-large.step",
+      "format": "step",
+      "size_bytes": 6687,
+      "wall_ms": 2.53,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 164,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.29
+    },
+    {
+      "file": "35-cylinder.step",
+      "format": "step",
+      "size_bytes": 12457,
+      "wall_ms": 2.47,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 308,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.85
+    },
+    {
+      "file": "36-sphere.step",
+      "format": "step",
+      "size_bytes": 5138,
+      "wall_ms": 2.72,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 122,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.26
+    },
+    {
+      "file": "37-cone.step",
+      "format": "step",
+      "size_bytes": 10924,
+      "wall_ms": 2.72,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 287,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.4
+    },
+    {
+      "file": "38-torus.step",
+      "format": "step",
+      "size_bytes": 36161,
+      "wall_ms": 2.95,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 805,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.76
+    },
+    {
+      "file": "39-multi-solid-2.step",
+      "format": "step",
+      "size_bytes": 13431,
+      "wall_ms": 2.91,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 329,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 5
+      },
+      "wall_ms_binary": 2.35
+    },
+    {
+      "file": "40-multi-solid-3.step",
+      "format": "step",
+      "size_bytes": 20133,
+      "wall_ms": 2.9,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 493,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 7
+      },
+      "wall_ms_binary": 2.22
+    },
+    {
+      "file": "41-multi-solid-5.step",
+      "format": "step",
+      "size_bytes": 33537,
+      "wall_ms": 3.02,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 821,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 11
+      },
+      "wall_ms_binary": 2.78
+    },
+    {
+      "file": "42-bspline.step",
+      "format": "step",
+      "size_bytes": 2136,
+      "wall_ms": 2.36,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 35,
+        "approximate": 1,
+        "degraded": 0,
+        "dropped": 2
+      },
+      "wall_ms_binary": 2.14
+    },
+    {
+      "file": "43-assembly.step",
+      "format": "step",
+      "size_bytes": 7338,
+      "wall_ms": 2.44,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 168,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 11
+      },
+      "wall_ms_binary": 2.24
+    },
+    {
+      "file": "44-whitespace.step",
+      "format": "step",
+      "size_bytes": 917,
+      "wall_ms": 2.12,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 18,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 1
+      },
+      "wall_ms_binary": 1.95
+    },
+    {
+      "file": "45-long-filename.step",
+      "format": "step",
+      "size_bytes": 970,
+      "wall_ms": 2.27,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 18,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 1
+      },
+      "wall_ms_binary": 2.17
+    },
+    {
+      "file": "46-zz-malformed.step",
+      "format": "step",
+      "size_bytes": 278,
+      "wall_ms": 1.91,
+      "exit_code": 2,
+      "ok": false,
+      "expected_fail": true,
+      "error_snippet": "error: failed to import step: Parse error: missing DATA section"
+    },
+    {
+      "file": "47-small-box.step",
+      "format": "step",
+      "size_bytes": 6687,
+      "wall_ms": 2.32,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 164,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.22
+    },
+    {
+      "file": "48-box-rotated.step",
+      "format": "step",
+      "size_bytes": 6758,
+      "wall_ms": 2.27,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 165,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.09
+    },
+    {
+      "file": "49-thin-bracket.step",
+      "format": "step",
+      "size_bytes": 6699,
+      "wall_ms": 2.29,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 164,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 4
+      },
+      "wall_ms_binary": 2.46
+    },
+    {
+      "file": "50-empty.stl",
+      "format": "stl",
+      "size_bytes": 27,
+      "wall_ms": 2.16,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 0,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.0
+    },
+    {
+      "file": "51-verts-only.obj",
+      "format": "obj",
+      "size_bytes": 59,
+      "wall_ms": 2.1,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 5,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.2
+    },
+    {
+      "file": "52-crlf.stl",
+      "format": "stl",
+      "size_bytes": 2582,
+      "wall_ms": 2.26,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.28
+    },
+    {
+      "file": "bracket.step",
+      "format": "step",
+      "size_bytes": 818,
+      "wall_ms": 2.63,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "degraded",
+        "lossless": 18,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 1
+      },
+      "wall_ms_binary": 2.23
+    },
+    {
+      "file": "cube-ascii.stl",
+      "format": "stl",
+      "size_bytes": 1423,
+      "wall_ms": 2.16,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 20,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.14
+    },
+    {
+      "file": "quad.obj",
+      "format": "obj",
+      "size_bytes": 86,
+      "wall_ms": 2.28,
+      "exit_code": 0,
+      "ok": true,
+      "expected_fail": false,
+      "fidelity": {
+        "overall": "lossless",
+        "lossless": 6,
+        "approximate": 0,
+        "degraded": 0,
+        "dropped": 0
+      },
+      "wall_ms_binary": 2.02
+    }
+  ],
+  "summary": {
+    "stl": {
+      "count": 19,
+      "ok": 19,
+      "failed": 0,
+      "expected_failed": 0,
+      "mean_ms": 2.89,
+      "p95_ms": 3.32,
+      "total_dropped_entities": 0
+    },
+    "obj": {
+      "count": 17,
+      "ok": 17,
+      "failed": 0,
+      "expected_failed": 0,
+      "mean_ms": 3.23,
+      "p95_ms": 5.01,
+      "total_dropped_entities": 0
+    },
+    "step": {
+      "count": 18,
+      "ok": 17,
+      "failed": 1,
+      "expected_failed": 1,
+      "mean_ms": 2.52,
+      "p95_ms": 2.95,
+      "total_dropped_entities": 75
+    }
+  }
+}

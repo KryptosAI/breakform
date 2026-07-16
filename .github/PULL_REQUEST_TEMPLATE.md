@@ -1,0 +1,4 @@
+- [ ] All tests pass (`cargo test --workspace`)
+- [ ] Fidelity-report tests exist for converter changes
+- [ ] DCO sign-off on all commits
+- [ ] Spec updated if the format schema changed

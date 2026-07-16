@@ -1,0 +1,20 @@
+[package]
+name = "exl-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "eng"
+path = "src/main.rs"
+
+[dependencies]
+exl-core = { workspace = true }
+exl-io = { workspace = true }
+exl-fmt = { workspace = true }
+exl-step = { workspace = true }
+exl-diff = { workspace = true }
+exl-validate = { workspace = true }
+exl-gltf = { workspace = true }
+serde_json = { workspace = true }
+clap = { version = "4", features = ["derive"] }

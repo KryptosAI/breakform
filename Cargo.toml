@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/exl-geom",
+    "crates/exl-core",
+    "crates/exl-io",
+    "crates/exl-fmt",
+    "crates/exl-gltf",
+    "crates/exl-step",
+    "crates/exl-diff",
+    "crates/exl-validate",
+    "crates/exl-cli",
+]
+exclude = ["crates/exl-py"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "1"
+exl-geom = { path = "crates/exl-geom" }
+exl-core = { path = "crates/exl-core" }
+exl-io = { path = "crates/exl-io" }
+exl-fmt = { path = "crates/exl-fmt" }
+exl-gltf = { path = "crates/exl-gltf" }
+exl-step = { path = "crates/exl-step" }
+exl-diff = { path = "crates/exl-diff" }
+exl-validate = { path = "crates/exl-validate" }

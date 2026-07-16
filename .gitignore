@@ -1,0 +1,10 @@
+/target
+**/*.rs.bk
+*.pyc
+__pycache__/
+.venv/
+wheels/
+*.whl
+bench/.tmp/
+.DS_Store
+/crates/exl-py/target/
