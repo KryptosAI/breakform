@@ -7,7 +7,7 @@ Import/export `.exl` files in Gmsh using the Breakform engineering data format.
 Requires Python 3.10+ with the `exl` and `gmsh` packages:
 
 ```bash
-pip install exl gmsh
+pip install breakform gmsh
 ```
 
 ## Usage

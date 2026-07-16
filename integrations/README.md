@@ -43,4 +43,4 @@ ln -s "$PWD/integrations/freecad" ~/.local/share/FreeCAD/Mod/Breakform
 
 ### Format coverage
 
-Supported via the `exl` Python package (`pip install exl`) and meshio bridge (27 import + 28 export mesh formats).
+Supported via the `exl` Python package (`pip install breakform`) and meshio bridge (27 import + 28 export mesh formats).

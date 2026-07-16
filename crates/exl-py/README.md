@@ -1,4 +1,4 @@
-# exl-py
+# breakform (Python bindings)
 
 Python bindings for Breakform — open engineering-data interop with honest fidelity reports.
 

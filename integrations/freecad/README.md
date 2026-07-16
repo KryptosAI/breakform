@@ -28,7 +28,7 @@ Copy the `integrations/freecad/` directory to `~/Library/Preferences/FreeCAD/Mod
 ### Dependencies
 
 ```bash
-pip install exl
+pip install breakform
 ```
 
 The `exl` Python package provides `load_json`, `convert`, `validate`, `diff`, and `content_hash` functions.

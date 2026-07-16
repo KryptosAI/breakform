@@ -60,7 +60,7 @@ make bench
 Quickstart:
 
 ```bash
-pip install exl
+pip install breakform
 python -c "import exl; exl.convert('model.step', 'model.exl')"
 ```
 
