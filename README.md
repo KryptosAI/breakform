@@ -60,9 +60,14 @@ make bench
 Quickstart:
 
 ```bash
-pip install breakform
+pip install breakform              # core: convert, validate, diff
+pip install breakform[meshio]      # +27 mesh/solver formats via meshio
+pip install breakform[gmsh]        # Gmsh plugin
+pip install breakform[all]         # everything: meshio + Gmsh plugin
 python -c "import exl; exl.convert('model.step', 'model.exl')"
 ```
+
+> **Note:** The wheel bundles the Python bridge code but not the meshio or gmsh PyPI dependencies. To use meshio-based formats (ANSYS, Exodus, Gmsh, VTK/VTU, XDMF, CGNS, MED, and others), install with `pip install breakform[meshio]`.
 
 Development install:
 

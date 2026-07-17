@@ -4,6 +4,7 @@ use exl_core::{
 };
 use exl_geom::Mesh;
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::Path;
 
 #[derive(Debug, thiserror::Error)]
@@ -707,6 +708,144 @@ pub fn import_nastran(path: &Path) -> Result<(Document, FidelityReport), Nastran
 
 pub use import_nastran as import_bdf;
 
+pub fn export_nastran(doc: &Document, path: &Path) -> Result<FidelityReport, NastranError> {
+    let mut file = std::fs::File::create(path)?;
+    let mut report = FidelityReport::new("exl", "nastran");
+
+    let timestamp = iso_timestamp();
+    writeln!(file, "$ Breakform Nastran export")?;
+    writeln!(file, "$ Generated: {}", timestamp)?;
+    writeln!(file)?;
+
+    let mut total_verts: usize = 0;
+    let mut total_faces: usize = 0;
+    let mut material_written = false;
+    let mut has_fixed_bc = false;
+    let mut has_pressure_bc = false;
+
+    for part in &doc.parts {
+        let mesh = match &part.geometry {
+            GeometryPayload::Mesh(m) => m,
+            _ => continue,
+        };
+
+        let n_verts = mesh.vertices.len();
+        let n_faces = mesh.faces.len();
+        if n_verts == 0 && n_faces == 0 {
+            continue;
+        }
+
+        total_verts += n_verts;
+        total_faces += n_faces;
+
+        writeln!(file, "$ Part: {}", part.name)?;
+
+        for (i, v) in mesh.vertices.iter().enumerate() {
+            let gid = i + 1;
+            writeln!(file, "GRID,{},,{:.6},{:.6},{:.6}", gid, v[0], v[1], v[2])?;
+        }
+
+        for (i, face) in mesh.faces.iter().enumerate() {
+            let eid = i + 1;
+            let pid = 1i32;
+            let g1 = face[0] + 1;
+            let g2 = face[1] + 1;
+            let g3 = face[2] + 1;
+            writeln!(file, "CTRIA3,{},{},{},{},{}", eid, pid, g1, g2, g3)?;
+        }
+
+        if !material_written && !part.semantics.materials.is_empty() {
+            let mat = &part.semantics.materials[0];
+            let mid = 1i32;
+            let e_val = mat
+                .elastic_modulus
+                .as_ref()
+                .map(|q| q.to_si())
+                .unwrap_or(0.0);
+            let nu_val = mat.poisson_ratio.unwrap_or(0.0);
+            let rho_val = mat
+                .density
+                .as_ref()
+                .map(|q| q.to_si())
+                .unwrap_or(0.0);
+
+            let e_str = if e_val == 0.0 {
+                String::new()
+            } else {
+                format!("{:.6E}", e_val)
+            };
+            let nu_str = if nu_val == 0.0 {
+                String::new()
+            } else {
+                format!("{}", nu_val)
+            };
+            let rho_str = if rho_val == 0.0 {
+                String::new()
+            } else {
+                format!("{}", rho_val)
+            };
+
+            writeln!(file, "MAT1,{},{},,{},{}", mid, e_str, nu_str, rho_str)?;
+            material_written = true;
+
+            report.record(
+                "materials",
+                part.semantics.materials.len(),
+                EntityStatus::Lossless,
+                None,
+            );
+        }
+
+        for bc in &part.semantics.boundary_conditions {
+            match bc.bc_type {
+                BcType::FixedDisplacement => {
+                    has_fixed_bc = true;
+                    let sid = 1i32;
+                    let val_str = if bc.value.value == 0.0 {
+                        String::new()
+                    } else {
+                        format!("{:.6}", bc.value.to_si())
+                    };
+                    for i in 0..mesh.vertices.len() {
+                        let gid = i as i32 + 1;
+                        writeln!(file, "SPC,{},{},123456,{}", sid, gid, val_str)?;
+                    }
+                }
+                BcType::Pressure => {
+                    has_pressure_bc = true;
+                }
+                _ => {}
+            }
+        }
+
+        writeln!(file)?;
+    }
+
+    if total_verts > 0 {
+        report.record("vertices", total_verts, EntityStatus::Lossless, None);
+    }
+    if total_faces > 0 {
+        report.record("faces", total_faces, EntityStatus::Lossless, None);
+    }
+    if has_fixed_bc {
+        report.record("fixed_BC", 1, EntityStatus::Lossless, None);
+    }
+    if has_pressure_bc {
+        report.record(
+            "pressure_BC",
+            1,
+            EntityStatus::Dropped,
+            Some("PLOAD4 requires face-element mapping not available at v0 export".into()),
+        );
+    }
+
+    writeln!(file, "ENDDATA")?;
+
+    Ok(report)
+}
+
+pub use export_nastran as export_bdf;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1079,5 +1218,163 @@ GRID,2,,1.0,0.0,0.0
                 .iter()
                 .any(|e| e.entity == "FORCE" && e.status == EntityStatus::Dropped)
         );
+    }
+
+    #[test]
+    fn export_round_trip_mesh_material_fixed_bc() {
+        let mesh = Mesh {
+            vertices: vec![
+                [0.0f32, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+            faces: vec![[0u32, 1, 2], [0, 2, 3]],
+            ..Default::default()
+        };
+
+        let mut part = Part::new("test_part", GeometryPayload::Mesh(mesh));
+        part.semantics.materials.push(Material {
+            name: "aluminum".into(),
+            elastic_modulus: Some(Quantity::new(70e9, Unit::Pascal)),
+            poisson_ratio: Some(0.33),
+            density: Some(Quantity::new(2700.0, Unit::KilogramPerCubicMeter)),
+            ..Default::default()
+        });
+        part.semantics.boundary_conditions.push(BoundaryCondition {
+            face_group: "1".into(),
+            bc_type: BcType::FixedDisplacement,
+            value: Quantity::new(0.0, Unit::Meter),
+            direction: None,
+        });
+
+        let doc = Document::new(vec![part]);
+
+        let dir = std::env::temp_dir().join("exl-nastran-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("roundtrip.bdf");
+
+        let report = export_nastran(&doc, &path).unwrap();
+        assert_eq!(report.source_format, "exl");
+        assert_eq!(report.target_format, "nastran");
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "vertices" && e.status == EntityStatus::Lossless)
+        );
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "faces" && e.status == EntityStatus::Lossless)
+        );
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "materials" && e.status == EntityStatus::Lossless)
+        );
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "fixed_BC" && e.status == EntityStatus::Lossless)
+        );
+
+        let (imported, import_report) = import_nastran(&path).unwrap();
+        assert_eq!(imported.parts.len(), 1);
+        let imported_part = &imported.parts[0];
+
+        if let GeometryPayload::Mesh(m) = &imported_part.geometry {
+            assert_eq!(m.vertices.len(), 4);
+            assert_eq!(m.faces.len(), 2);
+        } else {
+            panic!("expected mesh");
+        }
+
+        assert_eq!(imported_part.semantics.materials.len(), 1);
+        let mat = &imported_part.semantics.materials[0];
+        let e_si = mat.elastic_modulus.as_ref().unwrap().to_si();
+        assert!((e_si - 70e9).abs() < 1e6);
+        let nu = mat.poisson_ratio.unwrap();
+        assert!((nu - 0.33).abs() < 1e-6);
+        let rho_si = mat.density.as_ref().unwrap().to_si();
+        assert!((rho_si - 2700.0).abs() < 0.1);
+
+        assert!(!imported_part.semantics.boundary_conditions.is_empty());
+        let has_fixed = imported_part
+            .semantics
+            .boundary_conditions
+            .iter()
+            .any(|bc| matches!(bc.bc_type, BcType::FixedDisplacement));
+        assert!(has_fixed);
+
+        assert_eq!(import_report.source_format, "nastran");
+        assert_eq!(import_report.target_format, "exl");
+    }
+
+    #[test]
+    fn export_bdf_alias_works() {
+        let mesh = Mesh {
+            vertices: vec![[0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            faces: vec![[0u32, 1, 2]],
+            ..Default::default()
+        };
+        let doc = Document::new(vec![Part::new("tri", GeometryPayload::Mesh(mesh))]);
+
+        let dir = std::env::temp_dir().join("exl-nastran-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path1 = dir.join("alias1.bdf");
+        let path2 = dir.join("alias2.bdf");
+
+        let r1 = export_nastran(&doc, &path1).unwrap();
+        let r2 = export_bdf(&doc, &path2).unwrap();
+        assert_eq!(r1.source_format, r2.source_format);
+        assert_eq!(r1.target_format, r2.target_format);
+    }
+
+    #[test]
+    fn export_pressure_bc_dropped() {
+        let mesh = Mesh {
+            vertices: vec![[0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            faces: vec![[0u32, 1, 2]],
+            ..Default::default()
+        };
+        let mut part = Part::new("tri", GeometryPayload::Mesh(mesh));
+        part.semantics.boundary_conditions.push(BoundaryCondition {
+            face_group: "top".into(),
+            bc_type: BcType::Pressure,
+            value: Quantity::new(101325.0, Unit::Pascal),
+            direction: None,
+        });
+        let doc = Document::new(vec![part]);
+
+        let dir = std::env::temp_dir().join("exl-nastran-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("pressure.bdf");
+
+        let report = export_nastran(&doc, &path).unwrap();
+        let pressure_entity = report
+            .entities
+            .iter()
+            .find(|e| e.entity == "pressure_BC")
+            .expect("pressure_BC should be in fidelity report");
+        assert_eq!(pressure_entity.status, EntityStatus::Dropped);
+    }
+
+    #[test]
+    fn export_handles_empty_doc() {
+        let doc = Document::new(vec![]);
+        let dir = std::env::temp_dir().join("exl-nastran-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("empty.bdf");
+        let report = export_nastran(&doc, &path).unwrap();
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("ENDDATA"));
+        assert!(report
+            .entities
+            .iter()
+            .all(|e| e.status == EntityStatus::Lossless || e.status == EntityStatus::Dropped));
     }
 }

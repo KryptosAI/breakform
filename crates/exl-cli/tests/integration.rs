@@ -343,3 +343,45 @@ fn gltf_roundtrip() {
         count_ref, count_back
     );
 }
+
+#[test]
+fn openfoam_export_roundtrip() {
+    let dir = temp_dir("of_export");
+    let input = corpus_path("cube-ascii.stl");
+    let of_case = dir.join("ofcase");
+
+    let o1 = run_in_dir(
+        &[
+            "convert",
+            input.to_str().unwrap(),
+            of_case.to_str().unwrap(),
+            "--export-format",
+            "openfoam",
+        ],
+        &dir,
+    );
+    assert!(o1.status.success(), "stl->openfoam failed: stderr={}",
+        String::from_utf8_lossy(&o1.stderr));
+
+    assert!(of_case.is_dir(), "ofcase directory not created");
+    assert!(of_case.join("constant").join("polyMesh").join("points").exists());
+
+    let cube3_exl = dir.join("cube3.exl");
+    let o2 = run_in_dir(
+        &[
+            "convert",
+            of_case.to_str().unwrap(),
+            cube3_exl.to_str().unwrap(),
+        ],
+        &dir,
+    );
+    assert!(o2.status.success(), "openfoam->exl failed: stderr={}",
+        String::from_utf8_lossy(&o2.stderr));
+
+    let info_ref = run_in_dir(&["info", cube3_exl.to_str().unwrap()], &dir);
+    assert!(info_ref.status.success(), "info failed");
+    let stdout = String::from_utf8_lossy(&info_ref.stdout);
+
+    let verts = extract_vertex_count(&stdout);
+    assert!(verts > 0, "expected non-zero vertex count, got: {}", stdout);
+}

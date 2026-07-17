@@ -19,6 +19,229 @@ pub enum AbaqusError {
 
 pub use import_abaqus as import_inp;
 
+pub use export_abaqus as export_inp;
+
+pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, AbaqusError> {
+    use std::fmt::Write;
+
+    let mut report = FidelityReport::new("exl", "abaqus");
+
+    struct PartInfo {
+        node_base: u32,
+        elem_base: u32,
+        vert_count: usize,
+    }
+
+    let mut part_infos: Vec<PartInfo> = Vec::new();
+    let mut next_node: u32 = 1;
+    let mut next_elem: u32 = 1;
+
+    for part in &doc.parts {
+        match &part.geometry {
+            GeometryPayload::Mesh(mesh) => {
+                part_infos.push(PartInfo {
+                    node_base: next_node,
+                    elem_base: next_elem,
+                    vert_count: mesh.vertices.len(),
+                });
+                next_node += mesh.vertices.len() as u32;
+                next_elem += mesh.faces.len() as u32;
+            }
+            _ => {
+                part_infos.push(PartInfo {
+                    node_base: 0,
+                    elem_base: 0,
+                    vert_count: 0,
+                });
+            }
+        }
+    }
+
+    let total_verts = (next_node - 1) as usize;
+    let total_elems = (next_elem - 1) as usize;
+
+    let mut out = String::new();
+    let ts = iso_timestamp_now();
+
+    writeln!(&mut out, "** Breakform Abaqus export\n** Generated: {}", ts)
+        .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+    writeln!(&mut out, "*NODE")
+        .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+    for (pi, part) in doc.parts.iter().enumerate() {
+        if let GeometryPayload::Mesh(mesh) = &part.geometry {
+            let base = part_infos[pi].node_base;
+            for (vi, v) in mesh.vertices.iter().enumerate() {
+                writeln!(
+                    &mut out,
+                    "{}, {}, {}, {}",
+                    base + vi as u32,
+                    v[0],
+                    v[1],
+                    v[2]
+                )
+                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            }
+        }
+    }
+
+    writeln!(&mut out, "*ELEMENT, TYPE=S3")
+        .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+    for (pi, part) in doc.parts.iter().enumerate() {
+        if let GeometryPayload::Mesh(mesh) = &part.geometry {
+            let info = &part_infos[pi];
+            for (fi, face) in mesh.faces.iter().enumerate() {
+                writeln!(
+                    &mut out,
+                    "{}, {}, {}, {}",
+                    info.elem_base + fi as u32,
+                    info.node_base + face[0],
+                    info.node_base + face[1],
+                    info.node_base + face[2]
+                )
+                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            }
+        }
+    }
+
+    let mut mat_written = false;
+    for part in &doc.parts {
+        for mat in &part.semantics.materials {
+            if mat.elastic_modulus.is_some() {
+                let e_mod = mat.elastic_modulus.as_ref().unwrap();
+                let nu = mat.poisson_ratio.unwrap_or(0.3);
+                writeln!(&mut out, "*MATERIAL, NAME=BREAKFORM_MAT")
+                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                writeln!(&mut out, "*ELASTIC")
+                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                writeln!(&mut out, "{}, {}", e_mod.value, nu)
+                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                mat_written = true;
+                break;
+            }
+        }
+        if mat_written {
+            break;
+        }
+    }
+
+    let mut boundary_lines: Vec<String> = Vec::new();
+    let mut dload_lines: Vec<String> = Vec::new();
+    let mut has_fixed = false;
+    let mut has_pressure = false;
+
+    for (pi, part) in doc.parts.iter().enumerate() {
+        let info = &part_infos[pi];
+        if info.vert_count == 0 {
+            continue;
+        }
+        if let GeometryPayload::Mesh(mesh) = &part.geometry {
+            for bc in &part.semantics.boundary_conditions {
+                match bc.bc_type {
+                    BcType::FixedDisplacement => {
+                        has_fixed = true;
+                        let nodes = collect_group_nodes(mesh, &bc.face_group);
+                        for local_idx in nodes {
+                            let global_nid = info.node_base + local_idx;
+                            boundary_lines
+                                .push(format!("{}, {}, {}, 0.0", global_nid, 1, 3));
+                        }
+                    }
+                    BcType::Pressure => {
+                        has_pressure = true;
+                        let elems = collect_group_elements(mesh, &bc.face_group);
+                        for local_elem_idx in elems {
+                            let global_eid = info.elem_base + local_elem_idx;
+                            dload_lines.push(format!("{}, P, {}", global_eid, bc.value.value));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    if !boundary_lines.is_empty() || !dload_lines.is_empty() {
+        writeln!(&mut out, "*STEP")
+            .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        if !boundary_lines.is_empty() {
+            writeln!(&mut out, "*BOUNDARY")
+                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            for line in &boundary_lines {
+                writeln!(&mut out, "{}", line)
+                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            }
+        }
+        if !dload_lines.is_empty() {
+            writeln!(&mut out, "*DLOAD")
+                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            for line in &dload_lines {
+                writeln!(&mut out, "{}", line)
+                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            }
+        }
+    }
+
+    report.record("vertices", total_verts, EntityStatus::Lossless, None);
+    report.record("elements", total_elems, EntityStatus::Lossless, None);
+    if mat_written {
+        report.record("materials", 1, EntityStatus::Lossless, None);
+    }
+    if has_pressure {
+        report.record(
+            "pressure",
+            1,
+            EntityStatus::Dropped,
+            Some("face orientation not guaranteed".into()),
+        );
+    }
+    if has_fixed {
+        report.record(
+            "fixed_displacement",
+            boundary_lines.len(),
+            EntityStatus::Lossless,
+            None,
+        );
+    }
+
+    std::fs::write(path, out)?;
+    Ok(report)
+}
+
+fn collect_group_nodes(mesh: &Mesh, group_name: &str) -> Vec<u32> {
+    let mut nodes: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
+    if let Some(gid) = mesh.group_names.iter().position(|n| n == group_name) {
+        let gid = gid as u32;
+        if let Some(ref face_groups) = mesh.face_groups {
+            for (fi, fg) in face_groups.iter().enumerate() {
+                if *fg == gid && fi < mesh.faces.len() {
+                    nodes.insert(mesh.faces[fi][0]);
+                    nodes.insert(mesh.faces[fi][1]);
+                    nodes.insert(mesh.faces[fi][2]);
+                }
+            }
+        }
+    }
+    nodes.into_iter().collect()
+}
+
+fn collect_group_elements(mesh: &Mesh, group_name: &str) -> Vec<u32> {
+    let mut elems = Vec::new();
+    if let Some(gid) = mesh.group_names.iter().position(|n| n == group_name) {
+        let gid = gid as u32;
+        if let Some(ref face_groups) = mesh.face_groups {
+            for (fi, fg) in face_groups.iter().enumerate() {
+                if *fg == gid && fi < mesh.faces.len() {
+                    elems.push(fi as u32);
+                }
+            }
+        }
+    }
+    elems
+}
+
 pub fn import_abaqus(path: &Path) -> Result<(Document, FidelityReport), AbaqusError> {
     let content = std::fs::read_to_string(path)?;
     parse_abaqus(&content)
@@ -124,6 +347,7 @@ struct ElementTypeTracker {
     parabolic_count: usize,
     c3d8r_count: usize,
     c3d4_count: usize,
+    s3_count: usize,
     other_dropped: Vec<(String, usize)>,
 }
 
@@ -520,6 +744,8 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
             tracker.c3d8r_count += 1;
         } else if et == "C3D4" {
             tracker.c3d4_count += 1;
+        } else if et == "S3" || et == "S3R" {
+            tracker.s3_count += 1;
         } else if et == "C3D6" {
             tracker.wedge_count += 1;
         } else if et == "C3D10" || et == "C3D20" || et == "C3D15" {
@@ -614,6 +840,13 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                 let b = nids[b] as u32;
                 let c = nids[c] as u32;
                 faces.push([a, b, c]);
+                face_groups.push(gid);
+            }
+        } else if et == "S3" || et == "S3R" {
+            if nids.len() >= 3 {
+                let gname = "S3".to_string();
+                let gid = get_or_create_group(&gname);
+                faces.push([nids[0] as u32, nids[1] as u32, nids[2] as u32]);
                 face_groups.push(gid);
             }
         }
@@ -758,6 +991,9 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
     }
     if tracker.c3d4_count > 0 {
         fidelity.record("element_C3D4", tracker.c3d4_count, EntityStatus::Lossless, None);
+    }
+    if tracker.s3_count > 0 {
+        fidelity.record("element_S3", tracker.s3_count, EntityStatus::Lossless, None);
     }
     if tracker.wedge_count > 0 {
         fidelity.record(
@@ -1018,6 +1254,153 @@ Truss test
             assert_eq!(mesh.vertices[0], [10.0, 20.0, 30.0]);
             assert_eq!(mesh.vertices[1], [40.0, 50.0, 60.0]);
         }
+    }
+
+    fn make_cube_doc() -> Document {
+        let vertices: Vec<[f32; 3]> = vec![
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [0.0, 1.0, 1.0],
+        ];
+        let faces: Vec<[u32; 3]> = vec![
+            [0, 1, 2],
+            [0, 2, 3],
+            [4, 7, 6],
+            [4, 6, 5],
+            [0, 4, 5],
+            [0, 5, 1],
+            [1, 5, 6],
+            [1, 6, 2],
+            [2, 6, 7],
+            [2, 7, 3],
+            [3, 7, 4],
+            [3, 4, 0],
+        ];
+        let mesh = Mesh {
+            vertices,
+            faces,
+            ..Default::default()
+        };
+        let mut part = Part::new("cube", GeometryPayload::Mesh(mesh));
+        part.semantics.materials.push(Material {
+            name: "STEEL".into(),
+            elastic_modulus: Some(Quantity::new(200000.0, Unit::Megapascal)),
+            poisson_ratio: Some(0.3),
+            ..Default::default()
+        });
+        Document::new(vec![part])
+    }
+
+    #[test]
+    fn export_cube_roundtrip() {
+        let doc = make_cube_doc();
+        let temp_dir = std::env::temp_dir().join("exl-abaqus-export-test");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let out_path = temp_dir.join("cube_export.inp");
+
+        let report = export_abaqus(&doc, &out_path).unwrap();
+        assert_eq!(report.source_format, "exl");
+        assert_eq!(report.target_format, "abaqus");
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "vertices" && e.status == EntityStatus::Lossless),
+        );
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "elements" && e.status == EntityStatus::Lossless),
+        );
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "materials" && e.status == EntityStatus::Lossless),
+        );
+
+        let inp_content = std::fs::read_to_string(&out_path).unwrap();
+        assert!(inp_content.contains("** Breakform Abaqus export"));
+        assert!(inp_content.contains("*NODE"));
+        assert!(inp_content.contains("*ELEMENT, TYPE=S3"));
+        assert!(inp_content.contains("*MATERIAL, NAME=BREAKFORM_MAT"));
+        assert!(inp_content.contains("*ELASTIC"));
+
+        let (reimported, _) = parse_abaqus(&inp_content).unwrap();
+        assert_eq!(reimported.parts.len(), 1);
+        if let GeometryPayload::Mesh(ref m) = reimported.parts[0].geometry {
+            assert_eq!(m.vertices.len(), 8, "vertex count preserved");
+            assert_eq!(m.faces.len(), 12, "face count preserved");
+        } else {
+            panic!("expected mesh");
+        }
+
+        let _ = std::fs::remove_file(&out_path);
+        let _ = std::fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    fn export_with_boundary_conditions() {
+        let mut doc = make_cube_doc();
+        let face_groups_data: Vec<u32> = vec![0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5];
+        let group_names: Vec<String> = vec![
+            "bottom".into(),
+            "top".into(),
+            "front".into(),
+            "back".into(),
+            "left".into(),
+            "right".into(),
+        ];
+
+        if let GeometryPayload::Mesh(ref mut mesh) = doc.parts[0].geometry {
+            mesh.face_groups = Some(face_groups_data);
+            mesh.group_names = group_names.clone();
+        }
+
+        doc.parts[0].semantics.boundary_conditions.push(BoundaryCondition {
+            face_group: "bottom".into(),
+            bc_type: BcType::FixedDisplacement,
+            value: Quantity::new(0.0, Unit::Meter),
+            direction: None,
+        });
+        doc.parts[0].semantics.boundary_conditions.push(BoundaryCondition {
+            face_group: "top".into(),
+            bc_type: BcType::Pressure,
+            value: Quantity::new(100000.0, Unit::Pascal),
+            direction: None,
+        });
+
+        let temp_dir = std::env::temp_dir().join("exl-abaqus-bc-test");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let out_path = temp_dir.join("cube_bc.inp");
+
+        let report = export_abaqus(&doc, &out_path).unwrap();
+
+        let inp = std::fs::read_to_string(&out_path).unwrap();
+        assert!(inp.contains("*STEP"));
+        assert!(inp.contains("*BOUNDARY"));
+        assert!(inp.contains("*DLOAD"));
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "fixed_displacement" && e.status == EntityStatus::Lossless),
+        );
+        assert!(
+            report
+                .entities
+                .iter()
+                .any(|e| e.entity == "pressure" && e.status == EntityStatus::Dropped),
+        );
+
+        let _ = std::fs::remove_file(&out_path);
+        let _ = std::fs::remove_dir(&temp_dir);
     }
 
     #[test]

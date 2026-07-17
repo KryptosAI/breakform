@@ -25,3 +25,14 @@ print(exl.load_json("output.exl"))
 print(exl.validate("output.exl", "mech"))
 print(exl.content_hash("output.exl"))
 ```
+
+## Extras
+
+Breakform's optional Python dependencies are gated behind extras so the core install stays lean:
+
+| extra    | `pip install breakform[<extra>]` | brings                                                  |
+|----------|----------------------------------|---------------------------------------------------------|
+| (none)   | `pip install breakform`          | core: convert, validate, diff                           |
+| `meshio` | `pip install breakform[meshio]`  | 27 import + 28 export mesh/solver formats via meshio   |
+| `gmsh`   | `pip install breakform[gmsh]`    | Gmsh Python API                                         |
+| `all`    | `pip install breakform[all]`     | everything: meshio + Gmsh plugin                        |

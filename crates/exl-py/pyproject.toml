@@ -18,5 +18,10 @@ classifiers = [
 repository = "https://github.com/KryptosAI/breakform"
 homepage = "https://github.com/KryptosAI/breakform"
 
+[project.optional-dependencies]
+meshio = ["meshio"]
+gmsh = ["gmsh"]
+all = ["meshio", "gmsh"]
+
 [tool.maturin]
 python-source = "python"

@@ -717,6 +717,224 @@ pub fn import_openfoam(case_dir: &Path) -> Result<(Document, FidelityReport), Op
 
 pub use import_openfoam as import_of;
 
+fn foam_file_header(class: &str, object: &str, location: &str) -> String {
+    format!(
+        r#"/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: breakform export                      |
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{{
+    version     2.0;
+    format      ascii;
+    class       {};
+    location    "{}";
+    object      {};
+}}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+"#,
+        class, location, object
+    )
+}
+
+pub fn export_openfoam(doc: &Document, case_dir: &Path) -> Result<FidelityReport, OpenfoamError> {
+    use std::fs;
+
+    let mut all_vertices: Vec<[f32; 3]> = Vec::new();
+    let mut all_faces: Vec<[u32; 3]> = Vec::new();
+    let mut all_face_groups: Vec<u32> = Vec::new();
+    let mut all_group_names: Vec<String> = Vec::new();
+    let mut part_count = 0usize;
+    let mut mesh_part_count = 0usize;
+    let mut brep_part_count = 0usize;
+    let mut skipped_brep = false;
+
+    for part in &doc.parts {
+        part_count += 1;
+        match &part.geometry {
+            GeometryPayload::Mesh(mesh) => {
+                mesh_part_count += 1;
+                let vert_offset = all_vertices.len() as u32;
+                let group_offset = all_group_names.len() as u32;
+
+                all_vertices.extend_from_slice(&mesh.vertices);
+
+                for face in &mesh.faces {
+                    all_faces.push([
+                        face[0] + vert_offset,
+                        face[1] + vert_offset,
+                        face[2] + vert_offset,
+                    ]);
+                }
+
+                if let Some(ref groups) = mesh.face_groups {
+                    for &g in groups {
+                        all_face_groups.push(g + group_offset);
+                    }
+                } else {
+                    let default_group = all_group_names.len() as u32;
+                    if default_group == all_group_names.len() as u32 {
+                        all_group_names.push(format!("patch_{}", part.name));
+                    }
+                    for _ in 0..mesh.faces.len() {
+                        all_face_groups.push(group_offset);
+                    }
+                }
+
+                all_group_names.extend(mesh.group_names.iter().cloned());
+            }
+            GeometryPayload::Brep(_) => {
+                brep_part_count += 1;
+                skipped_brep = true;
+            }
+        }
+    }
+
+    if all_faces.is_empty() {
+        return Err(OpenfoamError::Unsupported(
+            "no mesh parts found in document".into(),
+        ));
+    }
+
+    let n_faces = all_faces.len();
+    let n_vertices = all_vertices.len();
+    let n_patches = if all_group_names.is_empty() { 1 } else { all_group_names.len() };
+
+    if all_face_groups.is_empty() {
+        for _ in 0..n_faces {
+            all_face_groups.push(0);
+        }
+        if all_group_names.is_empty() {
+            all_group_names.push("default".into());
+        }
+    }
+
+    let max_group = all_face_groups.iter().max().copied().unwrap_or(0) as usize;
+    while all_group_names.len() <= max_group {
+        all_group_names.push(format!("patch_{}", all_group_names.len()));
+    }
+
+    let mut group_face_counts: Vec<usize> = vec![0; all_group_names.len()];
+    for &g in &all_face_groups {
+        group_face_counts[g as usize] += 1;
+    }
+
+    let mut cumulative = 0usize;
+    let mut group_start_faces: Vec<usize> = vec![0; all_group_names.len()];
+    for (i, count) in group_face_counts.iter().enumerate() {
+        group_start_faces[i] = cumulative;
+        cumulative += count;
+    }
+
+    let mut reorder_map: Vec<usize> = vec![0; n_faces];
+    let mut next_write: Vec<usize> = group_start_faces.clone();
+    for (fi, &g) in all_face_groups.iter().enumerate() {
+        let pos = next_write[g as usize];
+        reorder_map[fi] = pos;
+        next_write[g as usize] += 1;
+    }
+
+    let mut reordered_faces: Vec<[u32; 3]> = vec![[0, 0, 0]; n_faces];
+    for (fi, &orig_idx) in reorder_map.iter().enumerate() {
+        reordered_faces[orig_idx] = all_faces[fi];
+    }
+
+    let poly_mesh_dir = case_dir.join("constant").join("polyMesh");
+    fs::create_dir_all(&poly_mesh_dir)?;
+
+    {
+        let mut s = foam_file_header("vectorField", "points", "\"constant/polyMesh\"");
+        s.push_str(&format!("{}\n(\n", n_vertices));
+        for v in &all_vertices {
+            s.push_str(&format!("({} {} {})\n", v[0], v[1], v[2]));
+        }
+        s.push_str(")\n");
+        fs::write(poly_mesh_dir.join("points"), s)?;
+    }
+
+    {
+        let mut s = foam_file_header("faceList", "faces", "\"constant/polyMesh\"");
+        s.push_str(&format!("{}\n(\n", n_faces));
+        for face in &reordered_faces {
+            s.push_str(&format!("3({} {} {})\n", face[0], face[1], face[2]));
+        }
+        s.push_str(")\n");
+        fs::write(poly_mesh_dir.join("faces"), s)?;
+    }
+
+    {
+        let mut s = foam_file_header("labelList", "owner", "\"constant/polyMesh\"");
+        s.push_str(&format!("{}\n(\n", n_faces));
+        for _ in 0..n_faces {
+            s.push_str("0\n");
+        }
+        s.push_str(")\n");
+        fs::write(poly_mesh_dir.join("owner"), s)?;
+    }
+
+    {
+        let s = foam_file_header("labelList", "neighbour", "\"constant/polyMesh\"") + "0\n(\n)\n";
+        fs::write(poly_mesh_dir.join("neighbour"), s)?;
+    }
+
+    {
+        let mut s = foam_file_header("polyBoundaryMesh", "boundary", "\"constant/polyMesh\"");
+        s.push_str(&format!("{}\n(\n", n_patches));
+        for pi in 0..n_patches {
+            if group_face_counts[pi] == 0 {
+                continue;
+            }
+            s.push_str(&format!(
+                "{}\n{{\n    type            wall;\n    nFaces          {};\n    startFace       {};\n}}\n",
+                all_group_names[pi], group_face_counts[pi], group_start_faces[pi]
+            ));
+        }
+        s.push_str(")\n");
+        fs::write(poly_mesh_dir.join("boundary"), s)?;
+    }
+
+    let constant_dir = case_dir.join("constant");
+    fs::create_dir_all(&constant_dir)?;
+    {
+        let tp = "transportModel  Newtonian;\nnu              nu [0 2 -1 0 0 0 0] 1e-06;\n";
+        let mut s = foam_file_header("dictionary", "transportProperties", "\"constant\"");
+        s.push_str(tp);
+        fs::write(constant_dir.join("transportProperties"), s)?;
+    }
+
+    let system_dir = case_dir.join("system");
+    fs::create_dir_all(&system_dir)?;
+    {
+        let cd = "application     breakformExport;\n\ndeltaT          0.001;\n\nendTime         1.0;\n";
+        let mut s = foam_file_header("dictionary", "controlDict", "\"system\"");
+        s.push_str(cd);
+        fs::write(system_dir.join("controlDict"), s)?;
+    }
+
+    let mut report = FidelityReport::new("exl", "openfoam");
+    report.record("parts", part_count, EntityStatus::Lossless, None);
+    report.record("mesh parts", mesh_part_count, EntityStatus::Lossless, None);
+    report.record("vertices", n_vertices, EntityStatus::Lossless, None);
+    report.record("faces", n_faces, EntityStatus::Lossless, None);
+    report.record("patches", n_patches, EntityStatus::Lossless, None);
+
+    if skipped_brep {
+        report.record(
+            "brep parts",
+            brep_part_count,
+            EntityStatus::Dropped,
+            Some("BRep geometry is not representable in OpenFOAM polyMesh".into()),
+        );
+    }
+
+    Ok(report)
+}
+
+pub use export_openfoam as export_of;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -985,6 +1203,80 @@ movingWall
         let patches = parse_boundary_content(content).unwrap();
         assert_eq!(patches.len(), 1);
         assert_eq!(patches[0].name, "movingWall");
+    }
+
+    #[test]
+    fn test_export_roundtrip_box_mesh() {
+        let mesh = exl_core::geom::Mesh {
+            vertices: vec![
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 1.0],
+                [1.0, 1.0, 1.0],
+                [0.0, 1.0, 1.0],
+            ],
+            faces: vec![
+                [0, 3, 7], [0, 7, 4],
+                [1, 5, 6], [1, 6, 2],
+                [0, 1, 5], [0, 5, 4],
+                [3, 2, 6], [3, 6, 7],
+                [0, 4, 5], [0, 5, 1],
+                [4, 7, 6], [4, 6, 5],
+            ],
+            face_groups: Some(vec![
+                0, 0,
+                1, 1,
+                0, 0,
+                0, 0,
+                0, 0,
+                2, 2,
+            ]),
+            group_names: vec!["inlet".into(), "outlet".into(), "walls".into()],
+            ..Default::default()
+        };
+
+        let part = Part::new("box", GeometryPayload::Mesh(mesh));
+        let doc = Document::new(vec![part]);
+
+        let case_dir = {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            static COUNTER: AtomicUsize = AtomicUsize::new(0);
+            let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+            std::env::temp_dir().join(format!("exl_of_export_{}_{}", std::process::id(), n))
+        };
+        let _ = fs::remove_dir_all(&case_dir);
+        fs::create_dir_all(&case_dir).unwrap();
+
+        let report = export_openfoam(&doc, &case_dir).unwrap();
+        assert_eq!(report.source_format, "exl");
+        assert_eq!(report.target_format, "openfoam");
+
+        assert!(case_dir.join("constant").join("polyMesh").join("points").exists());
+        assert!(case_dir.join("constant").join("polyMesh").join("faces").exists());
+        assert!(case_dir.join("constant").join("polyMesh").join("owner").exists());
+        assert!(case_dir.join("constant").join("polyMesh").join("neighbour").exists());
+        assert!(case_dir.join("constant").join("polyMesh").join("boundary").exists());
+        assert!(case_dir.join("constant").join("transportProperties").exists());
+        assert!(case_dir.join("system").join("controlDict").exists());
+
+        let (doc2, _report2) = import_openfoam(&case_dir).unwrap();
+        let mesh2 = match &doc2.parts[0].geometry {
+            GeometryPayload::Mesh(m) => m,
+            _ => panic!("expected mesh"),
+        };
+
+        assert_eq!(mesh2.vertices.len(), 8);
+        assert_eq!(mesh2.faces.len(), 12);
+        assert!(mesh2.face_groups.is_some());
+        let names = &mesh2.group_names;
+        assert!(names.contains(&"inlet".to_string()));
+        assert!(names.contains(&"outlet".to_string()));
+        assert!(names.contains(&"walls".to_string()));
+
+        let _ = fs::remove_dir_all(&case_dir);
     }
 
     #[test]

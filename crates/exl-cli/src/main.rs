@@ -28,6 +28,8 @@ enum Command {
         fidelity_report: Option<PathBuf>,
         #[arg(long, default_value_t = false)]
         ascii: bool,
+        #[arg(long = "export-format", short = 'f')]
+        export_format: Option<String>,
     },
 
     #[command(about = "Validate a native EXL document")]
@@ -138,16 +140,18 @@ fn convert(
     output: PathBuf,
     fidelity_report: Option<PathBuf>,
     ascii: bool,
+    export_format: Option<String>,
 ) -> Result<i32, String> {
-    let out_ext = extension(&output);
+    let effective_format = export_format.as_deref().unwrap_or(extension(&output));
+    let out_ext = effective_format.to_lowercase();
 
-    if matches!(out_ext, "step" | "stp") {
+    if matches!(out_ext.as_str(), "step" | "stp") {
         return Err("unsupported output format: STEP export is not available".to_string());
     }
 
     let (doc, import_report) = import_doc(&input)?;
 
-    let export_report = match out_ext {
+    let export_report = match out_ext.as_str() {
         "exl" | "exlb" => {
             exl_io::save(&doc, &output).map_err(|e| format!("failed to save: {}", e))?;
             None
@@ -164,9 +168,21 @@ fn convert(
             exl_gltf::export_gltf(&doc, &output)
                 .map_err(|e| format!("failed to export gltf: {}", e))?,
         ),
+        "bdf" | "dat" => Some(
+            exl_nastran::export_nastran(&doc, &output)
+                .map_err(|e| format!("failed to export nastran: {}", e))?,
+        ),
+        "openfoam" => Some(
+            exl_openfoam::export_openfoam(&doc, &output)
+                .map_err(|e| format!("failed to export openfoam: {}", e))?,
+        ),
+        "inp" => Some(
+            exl_abaqus::export_abaqus(&doc, &output)
+                .map_err(|e| format!("failed to export abaqus: {}", e))?,
+        ),
         _ => {
             eprintln!(
-                "error: unknown output extension '{}' — expected .exl, .exlb, .stl, .obj, or .glb",
+                "error: unknown output format '{}' — expected .exl, .exlb, .stl, .obj, .glb, .bdf, .dat, .inp, or --export-format openfoam",
                 out_ext
             );
             process::exit(2);
@@ -321,7 +337,8 @@ fn main() {
             output,
             fidelity_report,
             ascii,
-        } => convert(input, output, fidelity_report, ascii),
+            export_format,
+        } => convert(input, output, fidelity_report, ascii, export_format),
         Command::Validate { profile, file } => cmd_validate(profile, file),
         Command::Diff { a, b } => cmd_diff(a, b),
         Command::Info { file, json } => cmd_info(file, json),
