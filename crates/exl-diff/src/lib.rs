@@ -104,7 +104,12 @@ fn compare_metadata(a_part: &Part, b_part: &Part, report: &mut DiffReport) {
     diff_json_values(&prefix, &a_val, &b_val, report);
 }
 
-fn diff_json_values(path: &str, a: &serde_json::Value, b: &serde_json::Value, report: &mut DiffReport) {
+fn diff_json_values(
+    path: &str,
+    a: &serde_json::Value,
+    b: &serde_json::Value,
+    report: &mut DiffReport,
+) {
     match (a, b) {
         (serde_json::Value::Object(a_map), serde_json::Value::Object(b_map)) => {
             for (key, a_v) in a_map {
@@ -207,10 +212,18 @@ pub fn diff(a: &Document, b: &Document) -> DiffReport {
         }
     }
 
-    let a_instances: Vec<(&str, &exl_core::Instance)> =
-        a.assembly.instances.iter().map(|i| (i.name.as_str(), i)).collect();
-    let b_instances: Vec<(&str, &exl_core::Instance)> =
-        b.assembly.instances.iter().map(|i| (i.name.as_str(), i)).collect();
+    let a_instances: Vec<(&str, &exl_core::Instance)> = a
+        .assembly
+        .instances
+        .iter()
+        .map(|i| (i.name.as_str(), i))
+        .collect();
+    let b_instances: Vec<(&str, &exl_core::Instance)> = b
+        .assembly
+        .instances
+        .iter()
+        .map(|i| (i.name.as_str(), i))
+        .collect();
 
     for (name, a_inst) in &a_instances {
         if let Some((_, b_inst)) = b_instances.iter().find(|(n, _)| n == name) {
@@ -244,8 +257,8 @@ pub fn diff(a: &Document, b: &Document) -> DiffReport {
 mod tests {
     use super::*;
     use exl_core::geom::{BRep, BrepFace, Mesh, SurfaceType, Transform};
-    use exl_core::{Assembly, Document, GeometryPayload, Instance, Material, Part};
     use exl_core::units::{Quantity, Unit};
+    use exl_core::{Assembly, Document, GeometryPayload, Instance, Material, Part};
 
     fn make_doc(parts: Vec<Part>, assembly: Assembly) -> Document {
         let mut doc = Document {
@@ -303,7 +316,10 @@ mod tests {
 
         let report = diff(&a, &b);
         assert!(!report.metadata.is_empty());
-        assert!(report.metadata.iter().any(|m| m.path.contains("materials") && m.path.contains("elastic_modulus")));
+        assert!(report
+            .metadata
+            .iter()
+            .any(|m| m.path.contains("materials") && m.path.contains("elastic_modulus")));
     }
 
     #[test]
@@ -319,7 +335,11 @@ mod tests {
 
         let report = diff(&a, &b);
         assert!(!report.topology.added.is_empty());
-        assert!(report.topology.added.iter().any(|s| s == &format!("part:{}", b_part2_id)));
+        assert!(report
+            .topology
+            .added
+            .iter()
+            .any(|s| s == &format!("part:{}", b_part2_id)));
     }
 
     #[test]
@@ -334,10 +354,12 @@ mod tests {
         };
 
         let mut b_inst = a_inst.clone();
-        b_inst.transform = Transform([[1.0, 0.0, 0.0, 10.0],
-                                       [0.0, 1.0, 0.0, 0.0],
-                                       [0.0, 0.0, 1.0, 0.0],
-                                       [0.0, 0.0, 0.0, 1.0]]);
+        b_inst.transform = Transform([
+            [1.0, 0.0, 0.0, 10.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
 
         let a = make_doc(
             vec![part.clone()],
@@ -387,6 +409,10 @@ mod tests {
         let b = make_doc(vec![b_part], Assembly::default());
 
         let report = diff(&a, &b);
-        assert!(report.topology.modified.iter().any(|m| m.change == "surface_type" && m.id == "f1"));
+        assert!(report
+            .topology
+            .modified
+            .iter()
+            .any(|m| m.change == "surface_type" && m.id == "f1"));
     }
 }

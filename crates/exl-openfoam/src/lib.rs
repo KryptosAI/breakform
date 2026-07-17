@@ -1,6 +1,4 @@
-use exl_core::{
-    Document, EntityStatus, FidelityReport, GeometryPayload, Part, ToolOfOrigin,
-};
+use exl_core::{Document, EntityStatus, FidelityReport, GeometryPayload, Part, ToolOfOrigin};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -110,19 +108,17 @@ impl<'a> CharReader<'a> {
                         self.advance();
                     }
                 }
-                Some(b'/') => {
-                    match self.chars.get(self.pos + 1).copied() {
-                        Some(b'*') => {
-                            self.skip_block_comment()?;
-                        }
-                        Some(b'/') => {
-                            self.skip_line_comment();
-                        }
-                        _ => {
-                            self.advance();
-                        }
+                Some(b'/') => match self.chars.get(self.pos + 1).copied() {
+                    Some(b'*') => {
+                        self.skip_block_comment()?;
                     }
-                }
+                    Some(b'/') => {
+                        self.skip_line_comment();
+                    }
+                    _ => {
+                        self.advance();
+                    }
+                },
                 Some(_) => {
                     self.advance();
                 }
@@ -383,12 +379,10 @@ fn parse_boundary_content(content: &str) -> Result<Vec<Patch>, OpenfoamError> {
                 r.advance();
             }
         }
-        let start_face = start_face.ok_or_else(|| {
-            OpenfoamError::Parse(format!("patch '{}' missing startFace", name))
-        })?;
-        let n_faces = n_faces.ok_or_else(|| {
-            OpenfoamError::Parse(format!("patch '{}' missing nFaces", name))
-        })?;
+        let start_face = start_face
+            .ok_or_else(|| OpenfoamError::Parse(format!("patch '{}' missing startFace", name)))?;
+        let n_faces = n_faces
+            .ok_or_else(|| OpenfoamError::Parse(format!("patch '{}' missing nFaces", name)))?;
         patches.push(Patch {
             name,
             start_face,
@@ -485,10 +479,7 @@ fn extract_keyword(content: &str, key: &str) -> Option<String> {
             if rest.is_empty() {
                 continue;
             }
-            let value = rest
-                .split_whitespace()
-                .next()?
-                .trim_end_matches(';');
+            let value = rest.split_whitespace().next()?.trim_end_matches(';');
             return Some(value.to_string());
         }
     }
@@ -505,10 +496,7 @@ fn find_time_dir(case_dir: &Path) -> Option<std::path::PathBuf> {
             name.parse::<f64>().ok().map(|v| (v, e.path()))
         })
         .collect();
-    time_dirs.sort_by(|a, b| {
-        a.0.partial_cmp(&b.0)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    time_dirs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
     let zero = time_dirs.iter().find(|(v, _)| *v == 0.0);
     if let Some((_, path)) = zero {
         return Some(path.clone());
@@ -592,18 +580,18 @@ pub fn import_openfoam(case_dir: &Path) -> Result<(Document, FidelityReport), Op
     let boundary_content = fs::read_to_string(poly_mesh_dir.join("boundary"))?;
 
     let points = parse_points_content(&points_content)?;
-    report.record("polyMesh points", points.len(), EntityStatus::Lossless, None);
+    report.record(
+        "polyMesh points",
+        points.len(),
+        EntityStatus::Lossless,
+        None,
+    );
 
     let faces = parse_faces_content(&faces_content)?;
     report.record("polyMesh faces", faces.len(), EntityStatus::Lossless, None);
 
     let _owner = parse_int_list_content(&owner_content)?;
-    report.record(
-        "polyMesh owner",
-        _owner.len(),
-        EntityStatus::Lossless,
-        None,
-    );
+    report.record("polyMesh owner", _owner.len(), EntityStatus::Lossless, None);
 
     let neighbour_path = poly_mesh_dir.join("neighbour");
     if neighbour_path.exists() {
@@ -801,7 +789,11 @@ pub fn export_openfoam(doc: &Document, case_dir: &Path) -> Result<FidelityReport
 
     let n_faces = all_faces.len();
     let n_vertices = all_vertices.len();
-    let n_patches = if all_group_names.is_empty() { 1 } else { all_group_names.len() };
+    let n_patches = if all_group_names.is_empty() {
+        1
+    } else {
+        all_group_names.len()
+    };
 
     if all_face_groups.is_empty() {
         for _ in 0..n_faces {
@@ -908,7 +900,8 @@ pub fn export_openfoam(doc: &Document, case_dir: &Path) -> Result<FidelityReport
     let system_dir = case_dir.join("system");
     fs::create_dir_all(&system_dir)?;
     {
-        let cd = "application     breakformExport;\n\ndeltaT          0.001;\n\nendTime         1.0;\n";
+        let cd =
+            "application     breakformExport;\n\ndeltaT          0.001;\n\nendTime         1.0;\n";
         let mut s = foam_file_header("dictionary", "controlDict", "\"system\"");
         s.push_str(cd);
         fs::write(system_dir.join("controlDict"), s)?;
@@ -966,8 +959,7 @@ FoamFile
         use std::sync::atomic::{AtomicUsize, Ordering};
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let tmp =
-            std::env::temp_dir().join(format!("exl_of_test_{}_{}", std::process::id(), n));
+        let tmp = std::env::temp_dir().join(format!("exl_of_test_{}_{}", std::process::id(), n));
         fs::create_dir_all(&tmp).unwrap();
         let poly_mesh = tmp.join("constant").join("polyMesh");
         fs::create_dir_all(&poly_mesh).unwrap();
@@ -1219,21 +1211,20 @@ movingWall
                 [0.0, 1.0, 1.0],
             ],
             faces: vec![
-                [0, 3, 7], [0, 7, 4],
-                [1, 5, 6], [1, 6, 2],
-                [0, 1, 5], [0, 5, 4],
-                [3, 2, 6], [3, 6, 7],
-                [0, 4, 5], [0, 5, 1],
-                [4, 7, 6], [4, 6, 5],
+                [0, 3, 7],
+                [0, 7, 4],
+                [1, 5, 6],
+                [1, 6, 2],
+                [0, 1, 5],
+                [0, 5, 4],
+                [3, 2, 6],
+                [3, 6, 7],
+                [0, 4, 5],
+                [0, 5, 1],
+                [4, 7, 6],
+                [4, 6, 5],
             ],
-            face_groups: Some(vec![
-                0, 0,
-                1, 1,
-                0, 0,
-                0, 0,
-                0, 0,
-                2, 2,
-            ]),
+            face_groups: Some(vec![0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 2, 2]),
             group_names: vec!["inlet".into(), "outlet".into(), "walls".into()],
             ..Default::default()
         };
@@ -1254,12 +1245,35 @@ movingWall
         assert_eq!(report.source_format, "exl");
         assert_eq!(report.target_format, "openfoam");
 
-        assert!(case_dir.join("constant").join("polyMesh").join("points").exists());
-        assert!(case_dir.join("constant").join("polyMesh").join("faces").exists());
-        assert!(case_dir.join("constant").join("polyMesh").join("owner").exists());
-        assert!(case_dir.join("constant").join("polyMesh").join("neighbour").exists());
-        assert!(case_dir.join("constant").join("polyMesh").join("boundary").exists());
-        assert!(case_dir.join("constant").join("transportProperties").exists());
+        assert!(case_dir
+            .join("constant")
+            .join("polyMesh")
+            .join("points")
+            .exists());
+        assert!(case_dir
+            .join("constant")
+            .join("polyMesh")
+            .join("faces")
+            .exists());
+        assert!(case_dir
+            .join("constant")
+            .join("polyMesh")
+            .join("owner")
+            .exists());
+        assert!(case_dir
+            .join("constant")
+            .join("polyMesh")
+            .join("neighbour")
+            .exists());
+        assert!(case_dir
+            .join("constant")
+            .join("polyMesh")
+            .join("boundary")
+            .exists());
+        assert!(case_dir
+            .join("constant")
+            .join("transportProperties")
+            .exists());
         assert!(case_dir.join("system").join("controlDict").exists());
 
         let (doc2, _report2) = import_openfoam(&case_dir).unwrap();
@@ -1298,9 +1312,7 @@ movingWall
         }
 
         let pt = |i: usize, j: usize, k: usize| -> u32 { (k * pty * ptx + j * ptx + i) as u32 };
-        let cell = |i: usize, j: usize, k: usize| -> u32 {
-            (k * ny * nx + j * nx + i) as u32
-        };
+        let cell = |i: usize, j: usize, k: usize| -> u32 { (k * ny * nx + j * nx + i) as u32 };
 
         let mut faces: Vec<Vec<u32>> = Vec::new();
         let mut owner: Vec<u32> = Vec::new();
@@ -1317,7 +1329,12 @@ movingWall
             for j in 0..ny {
                 for i in 0..(nx - 1) {
                     let o = cell(i, j, k);
-                    faces.push(vec![pt(i + 1, j, k), pt(i + 1, j + 1, k), pt(i + 1, j + 1, k + 1), pt(i + 1, j, k + 1)]);
+                    faces.push(vec![
+                        pt(i + 1, j, k),
+                        pt(i + 1, j + 1, k),
+                        pt(i + 1, j + 1, k + 1),
+                        pt(i + 1, j, k + 1),
+                    ]);
                     owner.push(o);
                 }
             }
@@ -1327,7 +1344,12 @@ movingWall
             for i in 0..nx {
                 for j in 0..(ny - 1) {
                     let o = cell(i, j, k);
-                    faces.push(vec![pt(i, j + 1, k), pt(i, j + 1, k + 1), pt(i + 1, j + 1, k + 1), pt(i + 1, j + 1, k)]);
+                    faces.push(vec![
+                        pt(i, j + 1, k),
+                        pt(i, j + 1, k + 1),
+                        pt(i + 1, j + 1, k + 1),
+                        pt(i + 1, j + 1, k),
+                    ]);
                     owner.push(o);
                 }
             }
@@ -1337,7 +1359,12 @@ movingWall
             for i in 0..nx {
                 for k in 0..(nz - 1) {
                     let o = cell(i, j, k);
-                    faces.push(vec![pt(i, j, k + 1), pt(i + 1, j, k + 1), pt(i + 1, j + 1, k + 1), pt(i, j + 1, k + 1)]);
+                    faces.push(vec![
+                        pt(i, j, k + 1),
+                        pt(i + 1, j, k + 1),
+                        pt(i + 1, j + 1, k + 1),
+                        pt(i, j + 1, k + 1),
+                    ]);
                     owner.push(o);
                 }
             }
@@ -1347,7 +1374,12 @@ movingWall
         for k in 0..nz {
             for j in 0..ny {
                 let o = cell(0, j, k);
-                x_min_faces.push(vec![pt(0, j, k), pt(0, j + 1, k), pt(0, j + 1, k + 1), pt(0, j, k + 1)]);
+                x_min_faces.push(vec![
+                    pt(0, j, k),
+                    pt(0, j + 1, k),
+                    pt(0, j + 1, k + 1),
+                    pt(0, j, k + 1),
+                ]);
                 owner.push(o);
             }
         }
@@ -1356,7 +1388,12 @@ movingWall
         for k in 0..nz {
             for j in 0..ny {
                 let o = cell(nx - 1, j, k);
-                x_max_faces.push(vec![pt(nx, j, k), pt(nx, j, k + 1), pt(nx, j + 1, k + 1), pt(nx, j + 1, k)]);
+                x_max_faces.push(vec![
+                    pt(nx, j, k),
+                    pt(nx, j, k + 1),
+                    pt(nx, j + 1, k + 1),
+                    pt(nx, j + 1, k),
+                ]);
                 owner.push(o);
             }
         }
@@ -1365,7 +1402,12 @@ movingWall
         for k in 0..nz {
             for i in 0..nx {
                 let o = cell(i, 0, k);
-                y_min_faces.push(vec![pt(i, 0, k), pt(i, 0, k + 1), pt(i + 1, 0, k + 1), pt(i + 1, 0, k)]);
+                y_min_faces.push(vec![
+                    pt(i, 0, k),
+                    pt(i, 0, k + 1),
+                    pt(i + 1, 0, k + 1),
+                    pt(i + 1, 0, k),
+                ]);
                 owner.push(o);
             }
         }
@@ -1374,7 +1416,12 @@ movingWall
         for k in 0..nz {
             for i in 0..nx {
                 let o = cell(i, ny - 1, k);
-                y_max_faces.push(vec![pt(i, ny, k), pt(i + 1, ny, k), pt(i + 1, ny, k + 1), pt(i, ny, k + 1)]);
+                y_max_faces.push(vec![
+                    pt(i, ny, k),
+                    pt(i + 1, ny, k),
+                    pt(i + 1, ny, k + 1),
+                    pt(i, ny, k + 1),
+                ]);
                 owner.push(o);
             }
         }
@@ -1383,7 +1430,12 @@ movingWall
         for j in 0..ny {
             for i in 0..nx {
                 let o = cell(i, j, 0);
-                z_min_faces.push(vec![pt(i, j, 0), pt(i + 1, j, 0), pt(i + 1, j + 1, 0), pt(i, j + 1, 0)]);
+                z_min_faces.push(vec![
+                    pt(i, j, 0),
+                    pt(i + 1, j, 0),
+                    pt(i + 1, j + 1, 0),
+                    pt(i, j + 1, 0),
+                ]);
                 owner.push(o);
             }
         }
@@ -1392,7 +1444,12 @@ movingWall
         for j in 0..ny {
             for i in 0..nx {
                 let o = cell(i, j, nz - 1);
-                z_max_faces.push(vec![pt(i, j, nz), pt(i, j + 1, nz), pt(i + 1, j + 1, nz), pt(i + 1, j, nz)]);
+                z_max_faces.push(vec![
+                    pt(i, j, nz),
+                    pt(i, j + 1, nz),
+                    pt(i + 1, j + 1, nz),
+                    pt(i + 1, j, nz),
+                ]);
                 owner.push(o);
             }
         }
@@ -1404,7 +1461,10 @@ movingWall
         faces.extend(z_min_faces.clone());
         faces.extend(z_max_faces.clone());
 
-        assert_eq!(faces.len(), n_internal_x + n_internal_y + n_internal_z + n_boundary_x + n_boundary_y + n_boundary_z);
+        assert_eq!(
+            faces.len(),
+            n_internal_x + n_internal_y + n_internal_z + n_boundary_x + n_boundary_y + n_boundary_z
+        );
         assert_eq!(points.len(), ptx * pty * ptz);
         assert!(owner.len() == faces.len());
 
@@ -1434,7 +1494,11 @@ movingWall
         let internal_count = n_internal_x + n_internal_y + n_internal_z;
         assert_eq!(neighbour.len(), internal_count);
 
-        let fixed_walls_n = x_min_faces.len() + x_max_faces.len() + y_min_faces.len() + y_max_faces.len() + z_min_faces.len();
+        let fixed_walls_n = x_min_faces.len()
+            + x_max_faces.len()
+            + y_min_faces.len()
+            + y_max_faces.len()
+            + z_min_faces.len();
         let start_fixed_walls = internal_count;
         let start_moving_wall = start_fixed_walls + fixed_walls_n;
         let moving_wall_n = z_max_faces.len();
@@ -1507,7 +1571,9 @@ movingWall
 
         let case_dir = corpus_dir.parent().unwrap().parent().unwrap();
 
-        if let Ok(existing) = fs::read_to_string(case_dir.join("constant").join("transportProperties")) {
+        if let Ok(existing) =
+            fs::read_to_string(case_dir.join("constant").join("transportProperties"))
+        {
             if existing.is_empty() {
                 let tp = "transportModel  Newtonian;\nnu nu [0 2 -1 0 0 0 0] 0.01;\n";
                 fs::write(case_dir.join("constant").join("transportProperties"), tp).unwrap();

@@ -230,8 +230,7 @@ fn from_binary_v1(bytes: &[u8]) -> Result<Document, IoError> {
 
 fn from_binary_v2(bytes: &[u8]) -> Result<Document, IoError> {
     let header = parse_v2_header(bytes)?;
-    let buffer_table_bytes =
-        &bytes[32..32 + header.buffer_count as usize * 16];
+    let buffer_table_bytes = &bytes[32..32 + header.buffer_count as usize * 16];
 
     let mut buf_offsets = Vec::with_capacity(header.buffer_count as usize);
     let mut buf_lengths = Vec::with_capacity(header.buffer_count as usize);
@@ -360,12 +359,11 @@ fn read_buffer_f32_3d(
     }
     let f32s: &[f32] = bytemuck::cast_slice(raw);
     if f32s.len() % 3 != 0 {
-        return Err(IoError::Parse("f32 buffer length not multiple of 3 for vec3".into()));
+        return Err(IoError::Parse(
+            "f32 buffer length not multiple of 3 for vec3".into(),
+        ));
     }
-    let out: Vec<[f32; 3]> = f32s
-        .chunks_exact(3)
-        .map(|c| [c[0], c[1], c[2]])
-        .collect();
+    let out: Vec<[f32; 3]> = f32s.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
     Ok(out)
 }
 
@@ -384,7 +382,9 @@ fn read_buffer_f32_2d(
     }
     let f32s: &[f32] = bytemuck::cast_slice(raw);
     if f32s.len() % 2 != 0 {
-        return Err(IoError::Parse("f32 buffer length not multiple of 2 for vec2".into()));
+        return Err(IoError::Parse(
+            "f32 buffer length not multiple of 2 for vec2".into(),
+        ));
     }
     let out: Vec<[f32; 2]> = f32s.chunks_exact(2).map(|c| [c[0], c[1]]).collect();
     Ok(out)
@@ -405,12 +405,11 @@ fn read_buffer_u32_3d(
     }
     let u32s: &[u32] = bytemuck::cast_slice(raw);
     if u32s.len() % 3 != 0 {
-        return Err(IoError::Parse("u32 buffer length not multiple of 3 for face".into()));
+        return Err(IoError::Parse(
+            "u32 buffer length not multiple of 3 for face".into(),
+        ));
     }
-    let out: Vec<[u32; 3]> = u32s
-        .chunks_exact(3)
-        .map(|c| [c[0], c[1], c[2]])
-        .collect();
+    let out: Vec<[u32; 3]> = u32s.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
     Ok(out)
 }
 
@@ -437,12 +436,14 @@ fn read_buffer_bytes<'a>(
     lengths: &[u64],
     idx: usize,
 ) -> Result<&'a [u8], IoError> {
-    let offset = offsets.get(idx).copied().ok_or_else(|| {
-        IoError::Parse(format!("buffer index {} out of range", idx))
-    })?;
-    let length = lengths.get(idx).copied().ok_or_else(|| {
-        IoError::Parse(format!("buffer index {} out of range", idx))
-    })?;
+    let offset = offsets
+        .get(idx)
+        .copied()
+        .ok_or_else(|| IoError::Parse(format!("buffer index {} out of range", idx)))?;
+    let length = lengths
+        .get(idx)
+        .copied()
+        .ok_or_else(|| IoError::Parse(format!("buffer index {} out of range", idx)))?;
     if offset % 64 != 0 {
         return Err(IoError::Parse(format!(
             "buffer offset {} not 64-byte aligned",
@@ -674,15 +675,30 @@ impl MappedExlb {
         let vertices = get_f32_slice(data, &self.buf_offsets, &self.buf_lengths, entry.vertices)?;
         let faces = get_u32_slice(data, &self.buf_offsets, &self.buf_lengths, entry.faces)?;
         let normals = match entry.normals {
-            Some(i) => Some(get_f32_slice(data, &self.buf_offsets, &self.buf_lengths, i)?),
+            Some(i) => Some(get_f32_slice(
+                data,
+                &self.buf_offsets,
+                &self.buf_lengths,
+                i,
+            )?),
             None => None,
         };
         let uvs = match entry.uvs {
-            Some(i) => Some(get_f32_slice(data, &self.buf_offsets, &self.buf_lengths, i)?),
+            Some(i) => Some(get_f32_slice(
+                data,
+                &self.buf_offsets,
+                &self.buf_lengths,
+                i,
+            )?),
             None => None,
         };
         let face_groups = match entry.face_groups {
-            Some(i) => Some(get_u32_slice(data, &self.buf_offsets, &self.buf_lengths, i)?),
+            Some(i) => Some(get_u32_slice(
+                data,
+                &self.buf_offsets,
+                &self.buf_lengths,
+                i,
+            )?),
             None => None,
         };
 
@@ -725,14 +741,9 @@ impl MappedExlb {
                 None => None,
             };
 
-            let vertices: Vec<[f32; 3]> = verts
-                .chunks_exact(3)
-                .map(|c| [c[0], c[1], c[2]])
-                .collect();
-            let faces: Vec<[u32; 3]> = faces
-                .chunks_exact(3)
-                .map(|c| [c[0], c[1], c[2]])
-                .collect();
+            let vertices: Vec<[f32; 3]> =
+                verts.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
+            let faces: Vec<[u32; 3]> = faces.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
 
             let part = doc
                 .parts
@@ -789,7 +800,9 @@ fn get_f32_slice<'a>(
         .get(offset as usize..end as usize)
         .ok_or_else(|| IoError::Parse(format!("buffer {} out of range", idx)))?;
     if bytes.len() % 4 != 0 {
-        return Err(IoError::Parse("buffer length not multiple of 4 for f32".into()));
+        return Err(IoError::Parse(
+            "buffer length not multiple of 4 for f32".into(),
+        ));
     }
     if (bytes.as_ptr() as usize) % 4 != 0 {
         return Err(IoError::Parse("buffer misaligned for f32".into()));
@@ -811,7 +824,9 @@ fn get_u32_slice<'a>(
         .get(offset as usize..end as usize)
         .ok_or_else(|| IoError::Parse(format!("buffer {} out of range", idx)))?;
     if bytes.len() % 4 != 0 {
-        return Err(IoError::Parse("buffer length not multiple of 4 for u32".into()));
+        return Err(IoError::Parse(
+            "buffer length not multiple of 4 for u32".into(),
+        ));
     }
     if (bytes.as_ptr() as usize) % 4 != 0 {
         return Err(IoError::Parse("buffer misaligned for u32".into()));
@@ -984,12 +999,7 @@ mod tests {
                 [-1.0, 0.0, 0.0],
                 [1.0, 0.0, 0.0],
             ]),
-            uvs: Some(vec![
-                [0.0, 0.0],
-                [1.0, 0.0],
-                [0.0, 1.0],
-                [1.0, 1.0],
-            ]),
+            uvs: Some(vec![[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]),
             face_groups: Some(vec![0, 0, 1, 1]),
             group_names: vec!["group_a".into(), "group_b".into()],
         };

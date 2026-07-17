@@ -25,3 +25,4 @@ all = ["meshio", "gmsh"]
 
 [tool.maturin]
 python-source = "python"
+features = ["pyo3/extension-module"]

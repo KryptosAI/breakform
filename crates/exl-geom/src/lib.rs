@@ -4,11 +4,31 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum SurfaceParams {
-    Plane { origin: [f64; 3], normal: [f64; 3] },
-    Cylinder { origin: [f64; 3], axis: [f64; 3], radius: f64 },
-    Cone { origin: [f64; 3], axis: [f64; 3], radius: f64, half_angle: f64 },
-    Sphere { center: [f64; 3], radius: f64 },
-    Torus { center: [f64; 3], axis: [f64; 3], major_radius: f64, minor_radius: f64 },
+    Plane {
+        origin: [f64; 3],
+        normal: [f64; 3],
+    },
+    Cylinder {
+        origin: [f64; 3],
+        axis: [f64; 3],
+        radius: f64,
+    },
+    Cone {
+        origin: [f64; 3],
+        axis: [f64; 3],
+        radius: f64,
+        half_angle: f64,
+    },
+    Sphere {
+        center: [f64; 3],
+        radius: f64,
+    },
+    Torus {
+        center: [f64; 3],
+        axis: [f64; 3],
+        major_radius: f64,
+        minor_radius: f64,
+    },
     NurbsSurface {
         degree_u: usize,
         degree_v: usize,
@@ -22,9 +42,21 @@ pub enum SurfaceParams {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum CurveParams {
-    Line { point: [f64; 3], direction: [f64; 3] },
-    Circle { center: [f64; 3], axis: [f64; 3], radius: f64 },
-    Ellipse { center: [f64; 3], axis: [f64; 3], semi_major: f64, semi_minor: f64 },
+    Line {
+        point: [f64; 3],
+        direction: [f64; 3],
+    },
+    Circle {
+        center: [f64; 3],
+        axis: [f64; 3],
+        radius: f64,
+    },
+    Ellipse {
+        center: [f64; 3],
+        axis: [f64; 3],
+        semi_major: f64,
+        semi_minor: f64,
+    },
     NurbsCurve {
         degree: usize,
         control_points: Vec<[f64; 3]>,

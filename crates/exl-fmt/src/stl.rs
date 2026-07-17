@@ -28,10 +28,7 @@ fn cross_normal(a: [f32; 3], b: [f32; 3], c: [f32; 3]) -> [f32; 3] {
     }
 }
 
-fn dedup_vertices(
-    verts: &[[f32; 3]],
-    faces: &[[u32; 3]],
-) -> (Vec<[f32; 3]>, Vec<[u32; 3]>) {
+fn dedup_vertices(verts: &[[f32; 3]], faces: &[[u32; 3]]) -> (Vec<[f32; 3]>, Vec<[u32; 3]>) {
     let mut map: HashMap<[u32; 3], u32> = HashMap::new();
     let mut unique: Vec<[f32; 3]> = Vec::new();
     let mut new_faces: Vec<[u32; 3]> = faces.to_vec();
@@ -77,9 +74,21 @@ fn parse_stl_binary(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String
     let mut faces: Vec<[u32; 3]> = Vec::with_capacity(tri_count);
     for i in 0..tri_count {
         let off = 84 + i * 50 + 12;
-        let v0 = [read_le_f32(data, off), read_le_f32(data, off + 4), read_le_f32(data, off + 8)];
-        let v1 = [read_le_f32(data, off + 12), read_le_f32(data, off + 16), read_le_f32(data, off + 20)];
-        let v2 = [read_le_f32(data, off + 24), read_le_f32(data, off + 28), read_le_f32(data, off + 32)];
+        let v0 = [
+            read_le_f32(data, off),
+            read_le_f32(data, off + 4),
+            read_le_f32(data, off + 8),
+        ];
+        let v1 = [
+            read_le_f32(data, off + 12),
+            read_le_f32(data, off + 16),
+            read_le_f32(data, off + 20),
+        ];
+        let v2 = [
+            read_le_f32(data, off + 24),
+            read_le_f32(data, off + 28),
+            read_le_f32(data, off + 32),
+        ];
         let base = vertices.len() as u32;
         vertices.push(v0);
         vertices.push(v1);
@@ -129,15 +138,15 @@ fn parse_stl_ascii(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String)
                             lines[i]
                         )));
                     }
-                    let x: f32 = parts[1].parse().map_err(|_| {
-                        FmtError::Parse(format!("bad vertex x: {}", parts[1]))
-                    })?;
-                    let y: f32 = parts[2].parse().map_err(|_| {
-                        FmtError::Parse(format!("bad vertex y: {}", parts[2]))
-                    })?;
-                    let z: f32 = parts[3].parse().map_err(|_| {
-                        FmtError::Parse(format!("bad vertex z: {}", parts[3]))
-                    })?;
+                    let x: f32 = parts[1]
+                        .parse()
+                        .map_err(|_| FmtError::Parse(format!("bad vertex x: {}", parts[1])))?;
+                    let y: f32 = parts[2]
+                        .parse()
+                        .map_err(|_| FmtError::Parse(format!("bad vertex y: {}", parts[2])))?;
+                    let z: f32 = parts[3]
+                        .parse()
+                        .map_err(|_| FmtError::Parse(format!("bad vertex z: {}", parts[3])))?;
                     tri_verts[vi] = [x, y, z];
                     vi += 1;
                     if vi == 3 {
@@ -230,13 +239,28 @@ pub fn export_stl(doc: &Document, path: &Path, ascii: bool) -> Result<FidelityRe
 
     for (_part, mesh) in &meshes {
         if mesh.normals.is_some() {
-            report.record("normals", 0, EntityStatus::Dropped, Some("per-vertex normals not supported in STL".into()));
+            report.record(
+                "normals",
+                0,
+                EntityStatus::Dropped,
+                Some("per-vertex normals not supported in STL".into()),
+            );
         }
         if mesh.uvs.is_some() {
-            report.record("uvs", 0, EntityStatus::Dropped, Some("texture coordinates not supported in STL".into()));
+            report.record(
+                "uvs",
+                0,
+                EntityStatus::Dropped,
+                Some("texture coordinates not supported in STL".into()),
+            );
         }
         if mesh.face_groups.is_some() {
-            report.record("face_groups", 0, EntityStatus::Dropped, Some("face groups not supported in STL".into()));
+            report.record(
+                "face_groups",
+                0,
+                EntityStatus::Dropped,
+                Some("face groups not supported in STL".into()),
+            );
         }
     }
 
@@ -256,7 +280,12 @@ pub fn export_stl(doc: &Document, path: &Path, ascii: bool) -> Result<FidelityRe
 
     for part in &doc.parts {
         if !part.semantics.materials.is_empty() {
-            report.record("materials", 0, EntityStatus::Dropped, Some("materials not supported in STL".into()));
+            report.record(
+                "materials",
+                0,
+                EntityStatus::Dropped,
+                Some("materials not supported in STL".into()),
+            );
             break;
         }
     }
@@ -305,7 +334,12 @@ pub fn export_stl(doc: &Document, path: &Path, ascii: bool) -> Result<FidelityRe
         }
     }
 
-    report.record("triangles", tri_count as usize, EntityStatus::Lossless, None);
+    report.record(
+        "triangles",
+        tri_count as usize,
+        EntityStatus::Lossless,
+        None,
+    );
     Ok(report)
 }
 

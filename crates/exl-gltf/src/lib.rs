@@ -141,11 +141,21 @@ struct GltfScene {
 }
 
 fn read_le_u32(data: &[u8], offset: usize) -> u32 {
-    u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
+    u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 fn read_le_f32(data: &[u8], offset: usize) -> f32 {
-    f32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
+    f32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 fn read_le_u16(data: &[u8], offset: usize) -> u16 {
@@ -167,7 +177,9 @@ fn read_accessor_vec3(
     let base = bv.byte_offset as usize + acc.byte_offset as usize;
     let end = base + stride * acc.count as usize;
     if end > bin.len() {
-        return Err(GltfError::Parse("accessor data exceeds buffer bounds".into()));
+        return Err(GltfError::Parse(
+            "accessor data exceeds buffer bounds".into(),
+        ));
     }
     let mut out = Vec::with_capacity(acc.count as usize);
     for i in 0..acc.count as usize {
@@ -196,7 +208,9 @@ fn read_accessor_vec2(
     let base = bv.byte_offset as usize + acc.byte_offset as usize;
     let end = base + stride * acc.count as usize;
     if end > bin.len() {
-        return Err(GltfError::Parse("accessor data exceeds buffer bounds".into()));
+        return Err(GltfError::Parse(
+            "accessor data exceeds buffer bounds".into(),
+        ));
     }
     let mut out = Vec::with_capacity(acc.count as usize);
     for i in 0..acc.count as usize {
@@ -237,7 +251,9 @@ fn read_accessor_indices(
     let base = bv.byte_offset as usize + acc.byte_offset as usize;
     let end = base + stride * acc.count as usize;
     if end > bin.len() {
-        return Err(GltfError::Parse("index accessor data exceeds buffer bounds".into()));
+        return Err(GltfError::Parse(
+            "index accessor data exceeds buffer bounds".into(),
+        ));
     }
     let mut out = Vec::with_capacity(acc.count as usize);
     for i in 0..acc.count as usize {
@@ -486,23 +502,18 @@ pub fn import_gltf(path: &Path) -> Result<(Document, FidelityReport), GltfError>
                     .accessors
                     .get(idx_acc_idx as usize)
                     .ok_or_else(|| GltfError::Parse("invalid indices accessor index".into()))?;
-                let idx_bv_idx = idx_acc
-                    .buffer_view
-                    .ok_or_else(|| GltfError::Parse("indices accessor missing bufferView".into()))?;
+                let idx_bv_idx = idx_acc.buffer_view.ok_or_else(|| {
+                    GltfError::Parse("indices accessor missing bufferView".into())
+                })?;
                 let idx_bv = gltf
                     .buffer_views
                     .get(idx_bv_idx as usize)
                     .ok_or_else(|| GltfError::Parse("invalid indices bufferView index".into()))?;
                 let indices = read_accessor_indices(&bin_bytes, idx_bv, idx_acc)?;
-                indices
-                    .chunks(3)
-                    .map(|c| [c[0], c[1], c[2]])
-                    .collect()
+                indices.chunks(3).map(|c| [c[0], c[1], c[2]]).collect()
             } else {
                 let vc = vertices.len() as u32;
-                (0..vc / 3)
-                    .map(|i| [i * 3, i * 3 + 1, i * 3 + 2])
-                    .collect()
+                (0..vc / 3).map(|i| [i * 3, i * 3 + 1, i * 3 + 2]).collect()
             };
             total_faces += faces.len();
 
@@ -530,17 +541,12 @@ pub fn import_gltf(path: &Path) -> Result<(Document, FidelityReport), GltfError>
                     .accessors
                     .get(*uv_acc_idx as usize)
                     .ok_or_else(|| GltfError::Parse("invalid TEXCOORD_0 accessor index".into()))?;
-                let bv_idx = acc
-                    .buffer_view
-                    .ok_or_else(|| {
-                        GltfError::Parse("TEXCOORD_0 accessor missing bufferView".into())
-                    })?;
-                let bv = gltf
-                    .buffer_views
-                    .get(bv_idx as usize)
-                    .ok_or_else(|| {
-                        GltfError::Parse("invalid TEXCOORD_0 bufferView index".into())
-                    })?;
+                let bv_idx = acc.buffer_view.ok_or_else(|| {
+                    GltfError::Parse("TEXCOORD_0 accessor missing bufferView".into())
+                })?;
+                let bv = gltf.buffer_views.get(bv_idx as usize).ok_or_else(|| {
+                    GltfError::Parse("invalid TEXCOORD_0 bufferView index".into())
+                })?;
                 let u = read_accessor_vec2(&bin_bytes, bv, acc)?;
                 total_uvs += u.len();
                 Some(u)
@@ -573,18 +579,8 @@ pub fn import_gltf(path: &Path) -> Result<(Document, FidelityReport), GltfError>
     }
 
     fid.record("meshes", mesh_count_imported, EntityStatus::Lossless, None);
-    fid.record(
-        "positions",
-        total_vertices,
-        EntityStatus::Lossless,
-        None,
-    );
-    fid.record(
-        "indices",
-        total_faces * 3,
-        EntityStatus::Lossless,
-        None,
-    );
+    fid.record("positions", total_vertices, EntityStatus::Lossless, None);
+    fid.record("indices", total_faces * 3, EntityStatus::Lossless, None);
     if total_normals > 0 {
         fid.record("normals", total_normals, EntityStatus::Lossless, None);
     }
@@ -692,37 +688,36 @@ pub fn export_gltf(doc: &Document, path: &Path) -> Result<FidelityReport, GltfEr
                 let pos_acc_idx = acc_counter;
                 acc_counter += 1;
 
-                let normal_acc_idx: Option<u32> =
-                    if let Some(ref normals) = mesh.normals {
-                        let ns = buffer_data.len() as u32;
-                        for n in normals {
-                            buffer_data.extend_from_slice(&n[0].to_le_bytes());
-                            buffer_data.extend_from_slice(&n[1].to_le_bytes());
-                            buffer_data.extend_from_slice(&n[2].to_le_bytes());
-                        }
-                        let nl = (buffer_data.len() as u32) - ns;
+                let normal_acc_idx: Option<u32> = if let Some(ref normals) = mesh.normals {
+                    let ns = buffer_data.len() as u32;
+                    for n in normals {
+                        buffer_data.extend_from_slice(&n[0].to_le_bytes());
+                        buffer_data.extend_from_slice(&n[1].to_le_bytes());
+                        buffer_data.extend_from_slice(&n[2].to_le_bytes());
+                    }
+                    let nl = (buffer_data.len() as u32) - ns;
 
-                        buffer_views.push(serde_json::json!({
-                            "buffer": 0,
-                            "byteOffset": ns,
-                            "byteLength": nl,
-                        }));
-                        let bv_idx = bv_counter;
-                        bv_counter += 1;
+                    buffer_views.push(serde_json::json!({
+                        "buffer": 0,
+                        "byteOffset": ns,
+                        "byteLength": nl,
+                    }));
+                    let bv_idx = bv_counter;
+                    bv_counter += 1;
 
-                        accessors.push(serde_json::json!({
-                            "bufferView": bv_idx,
-                            "byteOffset": 0,
-                            "componentType": 5126,
-                            "count": vc,
-                            "type": "VEC3",
-                        }));
-                        let ai = acc_counter;
-                        acc_counter += 1;
-                        Some(ai)
-                    } else {
-                        None
-                    };
+                    accessors.push(serde_json::json!({
+                        "bufferView": bv_idx,
+                        "byteOffset": 0,
+                        "componentType": 5126,
+                        "count": vc,
+                        "type": "VEC3",
+                    }));
+                    let ai = acc_counter;
+                    acc_counter += 1;
+                    Some(ai)
+                } else {
+                    None
+                };
 
                 let uv_acc_idx: Option<u32> = if let Some(ref uvs) = mesh.uvs {
                     let us = buffer_data.len() as u32;
@@ -871,8 +866,7 @@ pub fn export_gltf(doc: &Document, path: &Path) -> Result<FidelityReport, GltfEr
     let bin_chunk_len = buffer_data.len();
     let bin_pad = (4 - (bin_chunk_len % 4)) % 4;
 
-    let total_len =
-        12 + 8 + json_chunk_len + json_pad + 8 + bin_chunk_len + bin_pad;
+    let total_len = 12 + 8 + json_chunk_len + json_pad + 8 + bin_chunk_len + bin_pad;
 
     let mut out = Vec::with_capacity(total_len);
 
@@ -1151,19 +1145,25 @@ mod tests {
 
         assert_eq!(data.len() % 4, 0, "GLB file length must be multiple of 4");
         let total_len = u32::from_le_bytes([data[8], data[9], data[10], data[11]]) as usize;
-        assert_eq!(data.len(), total_len, "actual length must match header total length");
+        assert_eq!(
+            data.len(),
+            total_len,
+            "actual length must match header total length"
+        );
 
-        let json_chunk_len =
-            u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as usize;
-        let json_chunk_type =
-            u32::from_le_bytes([data[16], data[17], data[18], data[19]]);
+        let json_chunk_len = u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as usize;
+        let json_chunk_type = u32::from_le_bytes([data[16], data[17], data[18], data[19]]);
         assert_eq!(json_chunk_type, 0x4E4F534A, "JSON chunk type");
 
         let json_pad = (4 - (json_chunk_len % 4)) % 4;
         let bin_offset = 12 + 8 + json_chunk_len + json_pad;
 
-        let bin_chunk_len =
-            u32::from_le_bytes([data[bin_offset], data[bin_offset + 1], data[bin_offset + 2], data[bin_offset + 3]]) as usize;
+        let bin_chunk_len = u32::from_le_bytes([
+            data[bin_offset],
+            data[bin_offset + 1],
+            data[bin_offset + 2],
+            data[bin_offset + 3],
+        ]) as usize;
         let bin_chunk_type = u32::from_le_bytes([
             data[bin_offset + 4],
             data[bin_offset + 5],
@@ -1188,11 +1188,7 @@ mod tests {
 
     #[test]
     fn trs_roundtrip() {
-        let rotated_scaled: [[f64; 3]; 3] = [
-            [0.0, -2.0, 0.0],
-            [2.0, 0.0, 0.0],
-            [0.0, 0.0, 2.0],
-        ];
+        let rotated_scaled: [[f64; 3]; 3] = [[0.0, -2.0, 0.0], [2.0, 0.0, 0.0], [0.0, 0.0, 2.0]];
 
         let mut expected = Transform::identity();
         expected.0[0][0] = rotated_scaled[0][0];
@@ -1299,13 +1295,15 @@ mod tests {
         let data = fs::read(&path).expect("read");
         fs::remove_file(&path).ok();
 
-        let json_chunk_len =
-            u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as usize;
+        let json_chunk_len = u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as usize;
         let json_bytes = &data[20..20 + json_chunk_len];
         let json_val: serde_json::Value =
             serde_json::from_slice(json_bytes).expect("parse json chunk");
         let node = &json_val["nodes"][0];
-        assert!(node.get("matrix").is_none(), "identity node must not have matrix");
+        assert!(
+            node.get("matrix").is_none(),
+            "identity node must not have matrix"
+        );
         assert!(
             node.get("translation").is_none(),
             "identity node must not have translation"

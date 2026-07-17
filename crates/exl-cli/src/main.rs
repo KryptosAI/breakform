@@ -40,10 +40,7 @@ enum Command {
     },
 
     #[command(about = "Diff two native EXL documents")]
-    Diff {
-        a: PathBuf,
-        b: PathBuf,
-    },
+    Diff { a: PathBuf, b: PathBuf },
 
     #[command(about = "Show document info")]
     Info {
@@ -227,12 +224,12 @@ fn convert(
     }
 
     println!("converted {} -> {}", input.display(), output.display());
-    println!("parts: {} ({} mesh, {} brep)", total_parts, mesh_parts, brep_parts);
-    println!("total vertices: {}, total faces: {}", vert_sum, face_sum);
     println!(
-        "overall fidelity: {}",
-        fidelity_label(&report_json)
+        "parts: {} ({} mesh, {} brep)",
+        total_parts, mesh_parts, brep_parts
     );
+    println!("total vertices: {}, total faces: {}", vert_sum, face_sum);
+    println!("overall fidelity: {}", fidelity_label(&report_json));
 
     Ok(0)
 }

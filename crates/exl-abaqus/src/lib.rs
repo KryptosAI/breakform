@@ -1,7 +1,7 @@
 use exl_core::units::{Quantity, Unit};
 use exl_core::{
-    Assembly, BcType, BoundaryCondition, Document, EntityStatus, FidelityReport,
-    GeometryPayload, Material, Part, Provenance, ToolOfOrigin,
+    Assembly, BcType, BoundaryCondition, Document, EntityStatus, FidelityReport, GeometryPayload,
+    Material, Part, Provenance, ToolOfOrigin,
 };
 use exl_geom::Mesh;
 use std::collections::HashMap;
@@ -112,12 +112,15 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
             if mat.elastic_modulus.is_some() {
                 let e_mod = mat.elastic_modulus.as_ref().unwrap();
                 let nu = mat.poisson_ratio.unwrap_or(0.3);
-                writeln!(&mut out, "*MATERIAL, NAME=BREAKFORM_MAT")
-                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
-                writeln!(&mut out, "*ELASTIC")
-                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
-                writeln!(&mut out, "{}, {}", e_mod.value, nu)
-                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                writeln!(&mut out, "*MATERIAL, NAME=BREAKFORM_MAT").map_err(|e| {
+                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                })?;
+                writeln!(&mut out, "*ELASTIC").map_err(|e| {
+                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                })?;
+                writeln!(&mut out, "{}, {}", e_mod.value, nu).map_err(|e| {
+                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                })?;
                 mat_written = true;
                 break;
             }
@@ -145,8 +148,7 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
                         let nodes = collect_group_nodes(mesh, &bc.face_group);
                         for local_idx in nodes {
                             let global_nid = info.node_base + local_idx;
-                            boundary_lines
-                                .push(format!("{}, {}, {}, 0.0", global_nid, 1, 3));
+                            boundary_lines.push(format!("{}, {}, {}, 0.0", global_nid, 1, 3));
                         }
                     }
                     BcType::Pressure => {
@@ -170,16 +172,18 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
             writeln!(&mut out, "*BOUNDARY")
                 .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
             for line in &boundary_lines {
-                writeln!(&mut out, "{}", line)
-                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                writeln!(&mut out, "{}", line).map_err(|e| {
+                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                })?;
             }
         }
         if !dload_lines.is_empty() {
             writeln!(&mut out, "*DLOAD")
                 .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
             for line in &dload_lines {
-                writeln!(&mut out, "{}", line)
-                    .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                writeln!(&mut out, "{}", line).map_err(|e| {
+                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                })?;
             }
         }
     }
@@ -437,9 +441,9 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                 while i < lines.len() && !lines[i].starts_with('*') {
                     let tokens = tokenize(&lines[i]);
                     if tokens.len() >= 4 {
-                        let nid: u32 = tokens[0]
-                            .parse()
-                            .map_err(|_| AbaqusError::Parse(format!("bad node id: {}", tokens[0])))?;
+                        let nid: u32 = tokens[0].parse().map_err(|_| {
+                            AbaqusError::Parse(format!("bad node id: {}", tokens[0]))
+                        })?;
                         let x: f32 = tokens[1]
                             .parse()
                             .map_err(|_| AbaqusError::Parse(format!("bad x: {}", tokens[1])))?;
@@ -471,9 +475,9 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                 while i < lines.len() && !lines[i].starts_with('*') {
                     let tokens = tokenize(&lines[i]);
                     if tokens.len() >= 2 {
-                        let eid: u32 = tokens[0]
-                            .parse()
-                            .map_err(|_| AbaqusError::Parse(format!("bad elem id: {}", tokens[0])))?;
+                        let eid: u32 = tokens[0].parse().map_err(|_| {
+                            AbaqusError::Parse(format!("bad elem id: {}", tokens[0]))
+                        })?;
                         let nids: Result<Vec<u32>, _> =
                             tokens[1..].iter().map(|t| t.parse::<u32>()).collect();
                         let nids = nids.map_err(|_| {
@@ -492,8 +496,8 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
             }
 
             if upper_stripped.starts_with("MATERIAL") {
-                let name = parse_parameter(&stripped, "NAME")
-                    .unwrap_or_else(|| "UNNAMED".to_string());
+                let name =
+                    parse_parameter(&stripped, "NAME").unwrap_or_else(|| "UNNAMED".to_string());
                 current_material_name = Some(name.clone());
                 materials.entry(name.clone()).or_insert_with(|| Material {
                     name: name.clone(),
@@ -530,10 +534,8 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                                 let rho: f64 = tokens[0].parse().unwrap_or(0.0);
                                 if let Some(ref mat_name) = current_material_name {
                                     if let Some(mat) = materials.get_mut(mat_name) {
-                                        mat.density = Some(Quantity::new(
-                                            rho,
-                                            Unit::KilogramPerCubicMeter,
-                                        ));
+                                        mat.density =
+                                            Some(Quantity::new(rho, Unit::KilogramPerCubicMeter));
                                     }
                                 }
                             }
@@ -657,9 +659,7 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                             }
                             i += 1;
                         }
-                    } else if sl_stripped.starts_with("NSET")
-                        || sl_stripped.starts_with("ELSET")
-                    {
+                    } else if sl_stripped.starts_with("NSET") || sl_stripped.starts_with("ELSET") {
                         i += 1;
                         while i < lines.len() && !lines[i].starts_with('*') {
                             i += 1;
@@ -702,8 +702,10 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                     );
                 }
 
-                let pinned_dof_count: usize =
-                    boundaries.iter().map(|b| (b.dof_end - b.dof_start + 1) as usize).sum();
+                let pinned_dof_count: usize = boundaries
+                    .iter()
+                    .map(|b| (b.dof_end - b.dof_start + 1) as usize)
+                    .sum();
                 if pinned_dof_count > 0 {
                     fidelity.record(
                         "boundary_condition",
@@ -753,10 +755,7 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
         } else if et == "TRUSS2" || et == "T3D2" {
             tracker.truss_count += 1;
         } else {
-            let entry = tracker
-                .other_dropped
-                .iter_mut()
-                .find(|(t, _)| t == et);
+            let entry = tracker.other_dropped.iter_mut().find(|(t, _)| t == et);
             if let Some((_, cnt)) = entry {
                 *cnt += 1;
             } else {
@@ -829,12 +828,8 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
             for fi in 0..4 {
                 let gname = format!("C3D4_S{}", fi + 1);
                 let gid = get_or_create_group(&gname);
-                let indices: [(usize, usize, usize); 4] = [
-                    (0, 1, 2),
-                    (0, 3, 1),
-                    (1, 3, 2),
-                    (2, 3, 0),
-                ];
+                let indices: [(usize, usize, usize); 4] =
+                    [(0, 1, 2), (0, 3, 1), (1, 3, 2), (2, 3, 0)];
                 let (a, b, c) = indices[fi];
                 let a = nids[a] as u32;
                 let b = nids[b] as u32;
@@ -987,10 +982,20 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
     }
 
     if tracker.c3d8r_count > 0 {
-        fidelity.record("element_C3D8R", tracker.c3d8r_count, EntityStatus::Lossless, None);
+        fidelity.record(
+            "element_C3D8R",
+            tracker.c3d8r_count,
+            EntityStatus::Lossless,
+            None,
+        );
     }
     if tracker.c3d4_count > 0 {
-        fidelity.record("element_C3D4", tracker.c3d4_count, EntityStatus::Lossless, None);
+        fidelity.record(
+            "element_C3D4",
+            tracker.c3d4_count,
+            EntityStatus::Lossless,
+            None,
+        );
     }
     if tracker.s3_count > 0 {
         fidelity.record("element_S3", tracker.s3_count, EntityStatus::Lossless, None);
@@ -1122,15 +1127,24 @@ Cube test
         );
 
         assert!(
-            fidelity.entities.iter().any(|e| e.entity == "element_C3D8R" && e.count == 1),
+            fidelity
+                .entities
+                .iter()
+                .any(|e| e.entity == "element_C3D8R" && e.count == 1),
             "expected C3D8R count 1"
         );
         assert!(
-            fidelity.entities.iter().any(|e| e.entity == "node" && e.count == 8),
+            fidelity
+                .entities
+                .iter()
+                .any(|e| e.entity == "node" && e.count == 8),
             "expected node count 8"
         );
         assert!(
-            fidelity.entities.iter().any(|e| e.entity == "mesh_face" && e.count == 12),
+            fidelity
+                .entities
+                .iter()
+                .any(|e| e.entity == "mesh_face" && e.count == 12),
             "expected mesh_face count 12"
         );
     }
@@ -1306,24 +1320,18 @@ Truss test
         let report = export_abaqus(&doc, &out_path).unwrap();
         assert_eq!(report.source_format, "exl");
         assert_eq!(report.target_format, "abaqus");
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "vertices" && e.status == EntityStatus::Lossless),
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "elements" && e.status == EntityStatus::Lossless),
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "materials" && e.status == EntityStatus::Lossless),
-        );
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "vertices" && e.status == EntityStatus::Lossless),);
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "elements" && e.status == EntityStatus::Lossless),);
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "materials" && e.status == EntityStatus::Lossless),);
 
         let inp_content = std::fs::read_to_string(&out_path).unwrap();
         assert!(inp_content.contains("** Breakform Abaqus export"));
@@ -1363,18 +1371,24 @@ Truss test
             mesh.group_names = group_names.clone();
         }
 
-        doc.parts[0].semantics.boundary_conditions.push(BoundaryCondition {
-            face_group: "bottom".into(),
-            bc_type: BcType::FixedDisplacement,
-            value: Quantity::new(0.0, Unit::Meter),
-            direction: None,
-        });
-        doc.parts[0].semantics.boundary_conditions.push(BoundaryCondition {
-            face_group: "top".into(),
-            bc_type: BcType::Pressure,
-            value: Quantity::new(100000.0, Unit::Pascal),
-            direction: None,
-        });
+        doc.parts[0]
+            .semantics
+            .boundary_conditions
+            .push(BoundaryCondition {
+                face_group: "bottom".into(),
+                bc_type: BcType::FixedDisplacement,
+                value: Quantity::new(0.0, Unit::Meter),
+                direction: None,
+            });
+        doc.parts[0]
+            .semantics
+            .boundary_conditions
+            .push(BoundaryCondition {
+                face_group: "top".into(),
+                bc_type: BcType::Pressure,
+                value: Quantity::new(100000.0, Unit::Pascal),
+                direction: None,
+            });
 
         let temp_dir = std::env::temp_dir().join("exl-abaqus-bc-test");
         std::fs::create_dir_all(&temp_dir).unwrap();
@@ -1386,18 +1400,14 @@ Truss test
         assert!(inp.contains("*STEP"));
         assert!(inp.contains("*BOUNDARY"));
         assert!(inp.contains("*DLOAD"));
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "fixed_displacement" && e.status == EntityStatus::Lossless),
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "pressure" && e.status == EntityStatus::Dropped),
-        );
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "fixed_displacement" && e.status == EntityStatus::Lossless),);
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "pressure" && e.status == EntityStatus::Dropped),);
 
         let _ = std::fs::remove_file(&out_path);
         let _ = std::fs::remove_dir(&temp_dir);

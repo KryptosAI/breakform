@@ -1,6 +1,10 @@
 use exl_core::{
-    geom::{BRep, BrepEdge, BrepFace, BrepVertex, CurveParams, CurveType, SurfaceParams, SurfaceType, Transform},
-    Assembly, Document, EntityStatus, FidelityReport, GeometryPayload, Instance, Part, ToolOfOrigin,
+    geom::{
+        BRep, BrepEdge, BrepFace, BrepVertex, CurveParams, CurveType, SurfaceParams, SurfaceType,
+        Transform,
+    },
+    Assembly, Document, EntityStatus, FidelityReport, GeometryPayload, Instance, Part,
+    ToolOfOrigin,
 };
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
@@ -156,9 +160,7 @@ impl Parser {
 
     fn read_number(&mut self) -> Result<f64, StepError> {
         let start = self.pos;
-        if self.pos < self.len
-            && (self.chars[self.pos] == '-' || self.chars[self.pos] == '+')
-        {
+        if self.pos < self.len && (self.chars[self.pos] == '-' || self.chars[self.pos] == '+') {
             self.pos += 1;
         }
         while self.pos < self.len && self.chars[self.pos].is_ascii_digit() {
@@ -170,13 +172,9 @@ impl Parser {
                 self.pos += 1;
             }
         }
-        if self.pos < self.len
-            && (self.chars[self.pos] == 'e' || self.chars[self.pos] == 'E')
-        {
+        if self.pos < self.len && (self.chars[self.pos] == 'e' || self.chars[self.pos] == 'E') {
             self.pos += 1;
-            if self.pos < self.len
-                && (self.chars[self.pos] == '-' || self.chars[self.pos] == '+')
-            {
+            if self.pos < self.len && (self.chars[self.pos] == '-' || self.chars[self.pos] == '+') {
                 self.pos += 1;
             }
             while self.pos < self.len && self.chars[self.pos].is_ascii_digit() {
@@ -193,8 +191,7 @@ impl Parser {
         self.skip_ws();
         let start = self.pos;
         while self.pos < self.len
-            && (self.chars[self.pos].is_ascii_alphanumeric()
-                || self.chars[self.pos] == '_')
+            && (self.chars[self.pos].is_ascii_alphanumeric() || self.chars[self.pos] == '_')
         {
             self.pos += 1;
         }
@@ -269,7 +266,10 @@ impl Parser {
                     if self.peek() == Some(')') {
                         self.advance();
                     }
-                    Ok(StepValue::Typed { name, value: Box::new(inner) })
+                    Ok(StepValue::Typed {
+                        name,
+                        value: Box::new(inner),
+                    })
                 } else {
                     Err(StepError::Parse(format!(
                         "unexpected identifier '{}' in value context at position {}",
@@ -315,15 +315,13 @@ fn extract_first_string(content: &str, keyword: &str) -> Option<String> {
     parser.expect_str("(").ok()?;
     match parser.parse_value().ok()? {
         StepValue::Str(s) => Some(s),
-        StepValue::List(items) => items
-            .first()
-            .and_then(|v| {
-                if let StepValue::Str(s) = v {
-                    Some(s.clone())
-                } else {
-                    None
-                }
-            }),
+        StepValue::List(items) => items.first().and_then(|v| {
+            if let StepValue::Str(s) = v {
+                Some(s.clone())
+            } else {
+                None
+            }
+        }),
         _ => None,
     }
 }
@@ -366,7 +364,10 @@ fn parse_data_section(section: &str) -> Result<HashMap<String, Vec<Entity>>, Ste
                 let sub_name = parser.read_entity_name()?;
                 parser.expect_str("(")?;
                 let args = parser.parse_arg_list_until_close()?;
-                sub_entities.push(Entity { name: sub_name, args });
+                sub_entities.push(Entity {
+                    name: sub_name,
+                    args,
+                });
             }
             if parser.peek() == Some(')') {
                 parser.advance();
@@ -409,10 +410,7 @@ where
     entities.get(id)?.iter().find(|e| pred(&e.name))
 }
 
-fn resolve_curve_type(
-    entities: &HashMap<String, Vec<Entity>>,
-    ref_id: &str,
-) -> CurveType {
+fn resolve_curve_type(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> CurveType {
     match first_entity_matching(entities, ref_id, |_| true) {
         Some(entity) => match entity.name.as_str() {
             "LINE" => CurveType::Line,
@@ -425,10 +423,7 @@ fn resolve_curve_type(
     }
 }
 
-fn resolve_surface_type(
-    entities: &HashMap<String, Vec<Entity>>,
-    ref_id: &str,
-) -> SurfaceType {
+fn resolve_surface_type(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> SurfaceType {
     match first_entity_matching(entities, ref_id, |_| true) {
         Some(entity) => match entity.name.as_str() {
             "PLANE" => SurfaceType::Plane,
@@ -444,10 +439,7 @@ fn resolve_surface_type(
     }
 }
 
-fn extract_face_edges(
-    entities: &HashMap<String, Vec<Entity>>,
-    bounds: &StepValue,
-) -> Vec<String> {
+fn extract_face_edges(entities: &HashMap<String, Vec<Entity>>, bounds: &StepValue) -> Vec<String> {
     let mut edge_ids = Vec::new();
 
     let bound_refs: Vec<String> = match bounds {
@@ -485,9 +477,7 @@ fn extract_face_edges(
                                                 if oe_entity.args.len() < 4 {
                                                     continue;
                                                 }
-                                                if let StepValue::Ref(ec_ref) =
-                                                    &oe_entity.args[3]
-                                                {
+                                                if let StepValue::Ref(ec_ref) = &oe_entity.args[3] {
                                                     edge_ids.push(ec_ref.clone());
                                                 }
                                             }
@@ -509,12 +499,11 @@ fn get_point(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> Option<[f
     let entity = find_entity_named(entities, ref_id, "CARTESIAN_POINT")?;
     if entity.args.len() >= 2 {
         if let StepValue::List(coords) = &entity.args[1] {
-            if let (
-                StepValue::Number(x),
-                StepValue::Number(y),
-                StepValue::Number(z),
-            ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
-            {
+            if let (StepValue::Number(x), StepValue::Number(y), StepValue::Number(z)) = (
+                unwrap_typed(&coords[0]),
+                unwrap_typed(&coords[1]),
+                unwrap_typed(&coords[2]),
+            ) {
                 return Some([*x, *y, *z]);
             }
         }
@@ -526,12 +515,11 @@ fn get_direction(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> Optio
     let entity = find_entity_named(entities, ref_id, "DIRECTION")?;
     if entity.args.len() >= 2 {
         if let StepValue::List(coords) = &entity.args[1] {
-            if let (
-                StepValue::Number(x),
-                StepValue::Number(y),
-                StepValue::Number(z),
-            ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
-            {
+            if let (StepValue::Number(x), StepValue::Number(y), StepValue::Number(z)) = (
+                unwrap_typed(&coords[0]),
+                unwrap_typed(&coords[1]),
+                unwrap_typed(&coords[2]),
+            ) {
                 return Some([*x, *y, *z]);
             }
         }
@@ -549,12 +537,11 @@ fn get_vector_direction(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -
     }
     if entity.name == "DIRECTION" && entity.args.len() >= 2 {
         if let StepValue::List(coords) = &entity.args[1] {
-            if let (
-                StepValue::Number(x),
-                StepValue::Number(y),
-                StepValue::Number(z),
-            ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
-            {
+            if let (StepValue::Number(x), StepValue::Number(y), StepValue::Number(z)) = (
+                unwrap_typed(&coords[0]),
+                unwrap_typed(&coords[1]),
+                unwrap_typed(&coords[2]),
+            ) {
                 return Some([*x, *y, *z]);
             }
         }
@@ -562,7 +549,10 @@ fn get_vector_direction(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -
     None
 }
 
-fn get_axis2_placement(entities: &HashMap<String, Vec<Entity>>, ref_id: &str) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
+fn get_axis2_placement(
+    entities: &HashMap<String, Vec<Entity>>,
+    ref_id: &str,
+) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
     let entity = find_entity_named(entities, ref_id, "AXIS2_PLACEMENT_3D")?;
     if entity.args.len() >= 4 {
         let origin = match &entity.args[1] {
@@ -593,8 +583,12 @@ fn resolve_surface_params(
         "PLANE" => {
             if entity.args.len() >= 2 {
                 if let StepValue::Ref(ax_ref) = &entity.args[1] {
-                    if let Some((origin, normal, _ref_dir)) = get_axis2_placement(entities, ax_ref) {
-                        return Some((face_id.to_string(), SurfaceParams::Plane { origin, normal }));
+                    if let Some((origin, normal, _ref_dir)) = get_axis2_placement(entities, ax_ref)
+                    {
+                        return Some((
+                            face_id.to_string(),
+                            SurfaceParams::Plane { origin, normal },
+                        ));
                     }
                 }
             }
@@ -603,8 +597,17 @@ fn resolve_surface_params(
             if entity.args.len() >= 3 {
                 if let StepValue::Ref(ax_ref) = &entity.args[1] {
                     if let StepValue::Number(radius) = entity.args[2] {
-                        if let Some((origin, axis, _ref_dir)) = get_axis2_placement(entities, ax_ref) {
-                            return Some((face_id.to_string(), SurfaceParams::Cylinder { origin, axis, radius }));
+                        if let Some((origin, axis, _ref_dir)) =
+                            get_axis2_placement(entities, ax_ref)
+                        {
+                            return Some((
+                                face_id.to_string(),
+                                SurfaceParams::Cylinder {
+                                    origin,
+                                    axis,
+                                    radius,
+                                },
+                            ));
                         }
                     }
                 }
@@ -616,8 +619,18 @@ fn resolve_surface_params(
                     if let (StepValue::Number(radius), StepValue::Number(half_angle)) =
                         (&entity.args[2], &entity.args[3])
                     {
-                        if let Some((origin, axis, _ref_dir)) = get_axis2_placement(entities, ax_ref) {
-                            return Some((face_id.to_string(), SurfaceParams::Cone { origin, axis, radius: *radius, half_angle: *half_angle }));
+                        if let Some((origin, axis, _ref_dir)) =
+                            get_axis2_placement(entities, ax_ref)
+                        {
+                            return Some((
+                                face_id.to_string(),
+                                SurfaceParams::Cone {
+                                    origin,
+                                    axis,
+                                    radius: *radius,
+                                    half_angle: *half_angle,
+                                },
+                            ));
                         }
                     }
                 }
@@ -627,8 +640,13 @@ fn resolve_surface_params(
             if entity.args.len() >= 3 {
                 if let StepValue::Ref(ax_ref) = &entity.args[1] {
                     if let StepValue::Number(radius) = entity.args[2] {
-                        if let Some((center, _axis, _ref_dir)) = get_axis2_placement(entities, ax_ref) {
-                            return Some((face_id.to_string(), SurfaceParams::Sphere { center, radius }));
+                        if let Some((center, _axis, _ref_dir)) =
+                            get_axis2_placement(entities, ax_ref)
+                        {
+                            return Some((
+                                face_id.to_string(),
+                                SurfaceParams::Sphere { center, radius },
+                            ));
                         }
                     }
                 }
@@ -640,8 +658,18 @@ fn resolve_surface_params(
                     if let (StepValue::Number(major_radius), StepValue::Number(minor_radius)) =
                         (&entity.args[2], &entity.args[3])
                     {
-                        if let Some((center, axis, _ref_dir)) = get_axis2_placement(entities, ax_ref) {
-                            return Some((face_id.to_string(), SurfaceParams::Torus { center, axis, major_radius: *major_radius, minor_radius: *minor_radius }));
+                        if let Some((center, axis, _ref_dir)) =
+                            get_axis2_placement(entities, ax_ref)
+                        {
+                            return Some((
+                                face_id.to_string(),
+                                SurfaceParams::Torus {
+                                    center,
+                                    axis,
+                                    major_radius: *major_radius,
+                                    minor_radius: *minor_radius,
+                                },
+                            ));
                         }
                     }
                 }
@@ -785,8 +813,17 @@ fn resolve_curve_params(
             if entity.args.len() >= 3 {
                 if let StepValue::Number(radius) = entity.args[2] {
                     if let StepValue::Ref(ax_ref) = &entity.args[1] {
-                        if let Some((center, axis, _ref_dir)) = get_axis2_placement(entities, ax_ref) {
-                            return Some((edge_id.to_string(), CurveParams::Circle { center, axis, radius }));
+                        if let Some((center, axis, _ref_dir)) =
+                            get_axis2_placement(entities, ax_ref)
+                        {
+                            return Some((
+                                edge_id.to_string(),
+                                CurveParams::Circle {
+                                    center,
+                                    axis,
+                                    radius,
+                                },
+                            ));
                         }
                     }
                 }
@@ -798,8 +835,18 @@ fn resolve_curve_params(
                     (&entity.args[2], &entity.args[3])
                 {
                     if let StepValue::Ref(ax_ref) = &entity.args[1] {
-                        if let Some((center, axis, _ref_dir)) = get_axis2_placement(entities, ax_ref) {
-                            return Some((edge_id.to_string(), CurveParams::Ellipse { center, axis, semi_major: *semi_major, semi_minor: *semi_minor }));
+                        if let Some((center, axis, _ref_dir)) =
+                            get_axis2_placement(entities, ax_ref)
+                        {
+                            return Some((
+                                edge_id.to_string(),
+                                CurveParams::Ellipse {
+                                    center,
+                                    axis,
+                                    semi_major: *semi_major,
+                                    semi_minor: *semi_minor,
+                                },
+                            ));
                         }
                     }
                 }
@@ -867,9 +914,7 @@ fn resolve_curve_params(
     None
 }
 
-fn build_brep(
-    entities: &HashMap<String, Vec<Entity>>,
-) -> (BRep, Consumed, HashMap<String, usize>) {
+fn build_brep(entities: &HashMap<String, Vec<Entity>>) -> (BRep, Consumed, HashMap<String, usize>) {
     let mut points: HashMap<String, [f64; 3]> = HashMap::new();
     let mut vertices: Vec<BrepVertex> = Vec::new();
     let mut edges: Vec<BrepEdge> = Vec::new();
@@ -887,12 +932,11 @@ fn build_brep(
             if entity.name == "CARTESIAN_POINT" && entity.args.len() >= 2 {
                 if let StepValue::List(coords) = &entity.args[1] {
                     if coords.len() == 3 {
-                        if let (
-                            StepValue::Number(x),
-                            StepValue::Number(y),
-                            StepValue::Number(z),
-                        ) = (unwrap_typed(&coords[0]), unwrap_typed(&coords[1]), unwrap_typed(&coords[2]))
-                        {
+                        if let (StepValue::Number(x), StepValue::Number(y), StepValue::Number(z)) = (
+                            unwrap_typed(&coords[0]),
+                            unwrap_typed(&coords[1]),
+                            unwrap_typed(&coords[2]),
+                        ) {
                             points.insert(id.clone(), [*x, *y, *z]);
                         }
                     }
@@ -989,15 +1033,17 @@ fn build_brep(
     )
 }
 
-fn find_solid_face_groups(
-    entities: &HashMap<String, Vec<Entity>>,
-) -> Vec<(String, Vec<String>)> {
+fn find_solid_face_groups(entities: &HashMap<String, Vec<Entity>>) -> Vec<(String, Vec<String>)> {
     let mut solids: Vec<(String, Vec<String>)> = Vec::new();
     for (_id, sub) in entities {
         for entity in sub {
             if entity.name == "MANIFOLD_SOLID_BREP" && entity.args.len() >= 2 {
                 let solid_name = if let StepValue::Str(ref s) = entity.args[0] {
-                    if s.is_empty() { format!("solid_{}", solids.len() + 1) } else { s.clone() }
+                    if s.is_empty() {
+                        format!("solid_{}", solids.len() + 1)
+                    } else {
+                        s.clone()
+                    }
                 } else {
                     format!("solid_{}", solids.len() + 1)
                 };
@@ -1006,13 +1052,18 @@ fn find_solid_face_groups(
                 } else {
                     continue;
                 };
-                if let Some(shell_entity) = find_entity_named(entities, &shell_ref, "CLOSED_SHELL") {
+                if let Some(shell_entity) = find_entity_named(entities, &shell_ref, "CLOSED_SHELL")
+                {
                     if shell_entity.args.len() >= 2 {
                         if let StepValue::List(face_refs) = &shell_entity.args[1] {
                             let face_ids: Vec<String> = face_refs
                                 .iter()
                                 .filter_map(|v| {
-                                    if let StepValue::Ref(r) = v { Some(r.clone()) } else { None }
+                                    if let StepValue::Ref(r) = v {
+                                        Some(r.clone())
+                                    } else {
+                                        None
+                                    }
                                 })
                                 .collect();
                             solids.push((solid_name, face_ids));
@@ -1147,7 +1198,11 @@ fn parse_assembly_instances(
                         && rel_entity.args.len() >= 3
                     {
                         if let StepValue::Ref(srr_ref) = &rel_entity.args[1] {
-                            if let Some(srr) = find_entity_named(entities, srr_ref, "SHAPE_REPRESENTATION_RELATIONSHIP") {
+                            if let Some(srr) = find_entity_named(
+                                entities,
+                                srr_ref,
+                                "SHAPE_REPRESENTATION_RELATIONSHIP",
+                            ) {
                                 if srr.args.len() >= 5 {
                                     if let StepValue::Ref(rep1_ref) = &srr.args[3] {
                                         if let StepValue::Ref(rep2_ref) = &srr.args[4] {
@@ -1156,23 +1211,25 @@ fn parse_assembly_instances(
                                             {
                                                 if let StepValue::Ref(idt_ref) = &rel_entity.args[2]
                                                 {
-                                                    if let Some(idt) = find_entity_named(entities, idt_ref, "ITEM_DEFINED_TRANSFORMATION") {
+                                                    if let Some(idt) = find_entity_named(
+                                                        entities,
+                                                        idt_ref,
+                                                        "ITEM_DEFINED_TRANSFORMATION",
+                                                    ) {
                                                         if idt.args.len() >= 4 {
                                                             if let StepValue::Ref(ax2_ref) =
                                                                 &idt.args[3]
                                                             {
-                                                                if let Some(
-                                                                    (origin, _axis, _ref_dir),
-                                                                ) = get_axis2_placement(
-                                                                    entities,
-                                                                    ax2_ref,
+                                                                if let Some((
+                                                                    origin,
+                                                                    _axis,
+                                                                    _ref_dir,
+                                                                )) = get_axis2_placement(
+                                                                    entities, ax2_ref,
                                                                 ) {
-                                                                    transform.0[0][3] =
-                                                                        origin[0];
-                                                                    transform.0[1][3] =
-                                                                        origin[1];
-                                                                    transform.0[2][3] =
-                                                                        origin[2];
+                                                                    transform.0[0][3] = origin[0];
+                                                                    transform.0[1][3] = origin[1];
+                                                                    transform.0[2][3] = origin[2];
                                                                 }
                                                             }
                                                         }
@@ -1277,12 +1334,10 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
         return Err(StepError::NotAStepFile);
     }
 
-    let header_section =
-        extract_section(&content, "HEADER;").unwrap_or_default();
+    let header_section = extract_section(&content, "HEADER;").unwrap_or_default();
 
-    let data_section = extract_section(&content, "DATA;").ok_or_else(|| {
-        StepError::Parse("missing DATA section".into())
-    })?;
+    let data_section = extract_section(&content, "DATA;")
+        .ok_or_else(|| StepError::Parse("missing DATA section".into()))?;
 
     let (model_name, _schema) = parse_header(&header_section)?;
 
@@ -1358,12 +1413,7 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
         EntityStatus::Lossless,
         None,
     );
-    report.record(
-        "EDGE_CURVE",
-        consumed.edges,
-        EntityStatus::Lossless,
-        None,
-    );
+    report.record("EDGE_CURVE", consumed.edges, EntityStatus::Lossless, None);
 
     let adv_face_lossless = consumed.faces > 0
         && consumed.faces
@@ -1371,9 +1421,9 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
                 .faces
                 .iter()
                 .filter(|f| {
-                    parametric_surf_types.contains(
-                        resolve_surface_type_from_brep(f, &full_brep).as_str(),
-                    ) && surface_captured.contains(&f.id)
+                    parametric_surf_types
+                        .contains(resolve_surface_type_from_brep(f, &full_brep).as_str())
+                        && surface_captured.contains(&f.id)
                 })
                 .count();
 
@@ -1481,9 +1531,7 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
                 Some("type mapped; parameters not preserved".into())
             };
             report.record(etype.clone(), *count, status, note);
-        } else if type_mapped_set.contains(&etype.as_str())
-            || etype.starts_with("B_SPLINE")
-        {
+        } else if type_mapped_set.contains(&etype.as_str()) || etype.starts_with("B_SPLINE") {
             report.record(
                 etype.clone(),
                 *count,
@@ -1502,10 +1550,7 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
                 Some("only vertex-referenced points preserved".into())
             };
             report.record(etype.clone(), *count, status, note);
-        } else if etype == "AXIS2_PLACEMENT_3D"
-            || etype == "DIRECTION"
-            || etype == "VECTOR"
-        {
+        } else if etype == "AXIS2_PLACEMENT_3D" || etype == "DIRECTION" || etype == "VECTOR" {
             let status = if has_params {
                 EntityStatus::Lossless
             } else {
@@ -1533,14 +1578,12 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
         }
     }
 
-    let name = model_name
-        .filter(|n| !n.is_empty())
-        .unwrap_or_else(|| {
-            path.file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("unknown")
-                .to_string()
-        });
+    let name = model_name.filter(|n| !n.is_empty()).unwrap_or_else(|| {
+        path.file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string()
+    });
 
     let parts: Vec<Part> = if solid_groups.is_empty() {
         vec![Part::new(name, GeometryPayload::Brep(full_brep))]
@@ -1710,34 +1753,52 @@ END-ISO-10303-21;
 
             for v in &brep.vertices {
                 assert!(
-                    v.point[0] >= 0.0 && v.point[0] <= 10.0
-                        && v.point[1] >= 0.0 && v.point[1] <= 10.0
+                    v.point[0] >= 0.0
+                        && v.point[0] <= 10.0
+                        && v.point[1] >= 0.0
+                        && v.point[1] <= 10.0
                 );
             }
 
-            let line_edges: Vec<_> =
-                brep.edges.iter().filter(|e| e.curve == CurveType::Line).collect();
-            let circle_edges: Vec<_> =
-                brep.edges.iter().filter(|e| e.curve == CurveType::Circle).collect();
+            let line_edges: Vec<_> = brep
+                .edges
+                .iter()
+                .filter(|e| e.curve == CurveType::Line)
+                .collect();
+            let circle_edges: Vec<_> = brep
+                .edges
+                .iter()
+                .filter(|e| e.curve == CurveType::Circle)
+                .collect();
             assert_eq!(line_edges.len(), 4, "LINE edge count");
             assert_eq!(circle_edges.len(), 1, "CIRCLE edge count");
 
-            let plane_face = brep.faces.iter().find(|f| f.surface == SurfaceType::Plane).unwrap();
+            let plane_face = brep
+                .faces
+                .iter()
+                .find(|f| f.surface == SurfaceType::Plane)
+                .unwrap();
             assert_eq!(plane_face.edges.len(), 4, "plane face edge refs");
 
-            let cyl_face = brep.faces.iter().find(|f| f.surface == SurfaceType::Cylinder).unwrap();
+            let cyl_face = brep
+                .faces
+                .iter()
+                .find(|f| f.surface == SurfaceType::Cylinder)
+                .unwrap();
             assert_eq!(cyl_face.edges.len(), 1, "cylinder face edge refs");
 
             assert_eq!(brep.surface_params.len(), 2, "surface params count");
             let plane_params = brep.surface_params.get(&plane_face.id).unwrap();
             assert!(
                 matches!(plane_params, SurfaceParams::Plane { origin, normal } if *origin == [0.0, 0.0, 0.0] && *normal == [0.0, 0.0, 1.0]),
-                "plane params: {:?}", plane_params
+                "plane params: {:?}",
+                plane_params
             );
             let cyl_params = brep.surface_params.get(&cyl_face.id).unwrap();
             assert!(
                 matches!(cyl_params, SurfaceParams::Cylinder { origin, axis, radius } if *origin == [0.0, 0.0, 0.0] && *axis == [0.0, 0.0, 1.0] && (*radius - 5.0).abs() < 1e-9),
-                "cylinder params: {:?}", cyl_params
+                "cylinder params: {:?}",
+                cyl_params
             );
 
             let circle_edge = circle_edges[0];
@@ -1745,7 +1806,8 @@ END-ISO-10303-21;
             let circle_params = brep.curve_params.get(&circle_edge.id).unwrap();
             assert!(
                 matches!(circle_params, CurveParams::Circle { center, axis, radius } if *center == [0.0, 0.0, 0.0] && *axis == [0.0, 0.0, 1.0] && (*radius - 5.0).abs() < 1e-9),
-                "circle params: {:?}", circle_params
+                "circle params: {:?}",
+                circle_params
             );
         } else {
             panic!("expected BRep geometry payload");
@@ -1813,9 +1875,15 @@ END-ISO-10303-21;
         assert_eq!(status_of("LINE"), Some(EntityStatus::Lossless));
         assert_eq!(status_of("CIRCLE"), Some(EntityStatus::Lossless));
         assert_eq!(status_of("PLANE"), Some(EntityStatus::Lossless));
-        assert_eq!(status_of("CYLINDRICAL_SURFACE"), Some(EntityStatus::Lossless));
+        assert_eq!(
+            status_of("CYLINDRICAL_SURFACE"),
+            Some(EntityStatus::Lossless)
+        );
         assert_eq!(status_of("VECTOR"), Some(EntityStatus::Lossless));
-        assert_eq!(status_of("AXIS2_PLACEMENT_3D"), Some(EntityStatus::Lossless));
+        assert_eq!(
+            status_of("AXIS2_PLACEMENT_3D"),
+            Some(EntityStatus::Lossless)
+        );
         assert_eq!(status_of("DIRECTION"), Some(EntityStatus::Lossless));
         assert_eq!(status_of("EDGE_LOOP"), Some(EntityStatus::Lossless));
         assert_eq!(status_of("ORIENTED_EDGE"), Some(EntityStatus::Lossless));
@@ -1937,29 +2005,45 @@ END-ISO-10303-21;
 
         assert_eq!(doc.parts.len(), 2, "should have 2 parts");
 
-        let part_a = doc.parts.iter().find(|p| p.name == "part_a").expect("part_a not found");
-        let part_b = doc.parts.iter().find(|p| p.name == "part_b").expect("part_b not found");
+        let part_a = doc
+            .parts
+            .iter()
+            .find(|p| p.name == "part_a")
+            .expect("part_a not found");
+        let part_b = doc
+            .parts
+            .iter()
+            .find(|p| p.name == "part_b")
+            .expect("part_b not found");
 
         for (part, expected_origin) in [(part_a, [0.0, 0.0, 0.0]), (part_b, [20.0, 0.0, 0.0])] {
             if let GeometryPayload::Brep(brep) = &part.geometry {
                 assert_eq!(brep.vertices.len(), 4, "{}: vertex count", part.name);
                 assert_eq!(brep.edges.len(), 4, "{}: edge count", part.name);
                 assert_eq!(brep.faces.len(), 1, "{}: face count", part.name);
-                assert_eq!(brep.surface_params.len(), 1, "{}: surface params", part.name);
+                assert_eq!(
+                    brep.surface_params.len(),
+                    1,
+                    "{}: surface params",
+                    part.name
+                );
 
                 let face = &brep.faces[0];
                 assert_eq!(face.surface, SurfaceType::Plane);
                 let sp = brep.surface_params.get(&face.id).unwrap();
                 assert!(
                     matches!(sp, SurfaceParams::Plane { origin, normal } if *origin == expected_origin && *normal == [0.0, 0.0, 1.0]),
-                    "{}: plane params: {:?}", part.name, sp
+                    "{}: plane params: {:?}",
+                    part.name,
+                    sp
                 );
 
                 assert_eq!(brep.curve_params.len(), 4, "{}: curve params", part.name);
                 for (_, cp) in &brep.curve_params {
                     assert!(
                         matches!(cp, CurveParams::Line { .. }),
-                        "{}: expected Line params", part.name
+                        "{}: expected Line params",
+                        part.name
                     );
                 }
             } else {
@@ -1976,7 +2060,10 @@ END-ISO-10303-21;
         };
         assert_eq!(status_of("PLANE"), Some(EntityStatus::Lossless));
         assert_eq!(status_of("PRODUCT"), Some(EntityStatus::Lossless));
-        assert_eq!(status_of("MANIFOLD_SOLID_BREP"), Some(EntityStatus::Dropped));
+        assert_eq!(
+            status_of("MANIFOLD_SOLID_BREP"),
+            Some(EntityStatus::Dropped)
+        );
         assert_eq!(status_of("CLOSED_SHELL"), Some(EntityStatus::Dropped));
     }
 
@@ -2037,7 +2124,15 @@ END-ISO-10303-21;
             let face = &brep.faces[0];
             assert_eq!(face.surface, SurfaceType::Nurbs);
             let sp = brep.surface_params.get(&face.id).unwrap();
-            if let SurfaceParams::NurbsSurface { degree_u, degree_v, control_points, knots_u, knots_v, weights } = sp {
+            if let SurfaceParams::NurbsSurface {
+                degree_u,
+                degree_v,
+                control_points,
+                knots_u,
+                knots_v,
+                weights,
+            } = sp
+            {
                 assert_eq!(*degree_u, 2);
                 assert_eq!(*degree_v, 2);
                 assert_eq!(control_points.len(), 3);
@@ -2054,9 +2149,19 @@ END-ISO-10303-21;
                 panic!("expected NurbsSurface, got {:?}", sp);
             }
 
-            let bspline_edge = brep.edges.iter().find(|e| e.curve == CurveType::Nurbs).unwrap();
+            let bspline_edge = brep
+                .edges
+                .iter()
+                .find(|e| e.curve == CurveType::Nurbs)
+                .unwrap();
             let cp = brep.curve_params.get(&bspline_edge.id).unwrap();
-            if let CurveParams::NurbsCurve { degree, control_points, knots, weights } = cp {
+            if let CurveParams::NurbsCurve {
+                degree,
+                control_points,
+                knots,
+                weights,
+            } = cp
+            {
                 assert_eq!(*degree, 3);
                 assert_eq!(control_points.len(), 4);
                 assert_eq!(knots.len(), 8);
@@ -2069,9 +2174,16 @@ END-ISO-10303-21;
                 panic!("expected NurbsCurve, got {:?}", cp);
             }
 
-            let line_edge = brep.edges.iter().find(|e| e.curve == CurveType::Line).unwrap();
+            let line_edge = brep
+                .edges
+                .iter()
+                .find(|e| e.curve == CurveType::Line)
+                .unwrap();
             assert!(brep.curve_params.contains_key(&line_edge.id));
-            assert!(matches!(brep.curve_params.get(&line_edge.id).unwrap(), CurveParams::Line { .. }));
+            assert!(matches!(
+                brep.curve_params.get(&line_edge.id).unwrap(),
+                CurveParams::Line { .. }
+            ));
         } else {
             panic!("expected BRep");
         }
@@ -2083,16 +2195,32 @@ END-ISO-10303-21;
                 .find(|e| e.entity == name)
                 .map(|e| (e.status, e.note.clone()))
         };
-        assert_eq!(status_of("B_SPLINE_CURVE_WITH_KNOTS"), Some((EntityStatus::Lossless, Some("full parameters captured".into()))));
-        assert_eq!(status_of("B_SPLINE_SURFACE_WITH_KNOTS"), Some((EntityStatus::Lossless, Some("full parameters captured".into()))));
+        assert_eq!(
+            status_of("B_SPLINE_CURVE_WITH_KNOTS"),
+            Some((
+                EntityStatus::Lossless,
+                Some("full parameters captured".into())
+            ))
+        );
+        assert_eq!(
+            status_of("B_SPLINE_SURFACE_WITH_KNOTS"),
+            Some((
+                EntityStatus::Lossless,
+                Some("full parameters captured".into())
+            ))
+        );
     }
 
     #[test]
     fn import_corpus_bspline_file() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/42-bspline.step");
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/42-bspline.step");
         let result = import_step(&path);
-        assert!(result.is_ok(), "import of 42-bspline.step failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "import of 42-bspline.step failed: {:?}",
+            result.err()
+        );
     }
 
     const COMPLEX_ENTITY_STEP: &str = r#"ISO-10303-21;
@@ -2115,8 +2243,8 @@ END-ISO-10303-21;
 
         assert_eq!(doc.parts.len(), 1);
 
-        let path2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/42-bspline.step");
+        let path2 =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/42-bspline.step");
         let content = std::fs::read_to_string(&path2).unwrap();
         let data_section = super::extract_section(&content, "DATA;").unwrap();
         assert!(!data_section.is_empty());
@@ -2141,7 +2269,11 @@ END-ISO-10303-21;
     fn typed_value_parses_in_args() {
         let path = write_test_file("typed_value.stp", TYPED_VALUE_STEP);
         let result = import_step(&path);
-        assert!(result.is_ok(), "typed value import failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "typed value import failed: {:?}",
+            result.err()
+        );
     }
 
     #[test]

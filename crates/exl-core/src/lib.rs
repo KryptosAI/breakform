@@ -1,6 +1,6 @@
 pub mod units;
 
-use exl_geom::{BoundingBox, BRep, Mesh, Transform};
+use exl_geom::{BRep, BoundingBox, Mesh, Transform};
 use serde::{Deserialize, Serialize};
 use units::Quantity;
 use uuid::Uuid;
@@ -229,9 +229,7 @@ impl FidelityReport {
         note: Option<String>,
     ) {
         match status {
-            EntityStatus::Dropped | EntityStatus::Degraded => {
-                self.overall = Fidelity::Degraded
-            }
+            EntityStatus::Dropped | EntityStatus::Degraded => self.overall = Fidelity::Degraded,
             EntityStatus::Approximate => {
                 if self.overall == Fidelity::Lossless {
                     self.overall = Fidelity::Approximate;

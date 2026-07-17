@@ -1,5 +1,5 @@
 use exl_core::{
-    units::Quantity, BoundaryCondition, BcType, Document, EntityStatus, FidelityReport,
+    units::Quantity, BcType, BoundaryCondition, Document, EntityStatus, FidelityReport,
     GeometryPayload, Material, Part, ToolOfOrigin, Unit,
 };
 use exl_geom::Mesh;
@@ -253,12 +253,7 @@ fn parse_ctetra(fields: &[String]) -> Option<ElementFaces> {
     }
     Some(ElementFaces {
         pid,
-        faces: vec![
-            [g1, g2, g3],
-            [g1, g3, g4],
-            [g1, g4, g2],
-            [g2, g4, g3],
-        ],
+        faces: vec![[g1, g2, g3], [g1, g3, g4], [g1, g4, g2], [g2, g4, g3]],
         has_parabolic_midsides: has_midsides,
     })
 }
@@ -395,9 +390,11 @@ fn assemble_parts(
         let mut faces: Vec<[u32; 3]> = Vec::new();
         for elem in elems {
             for face in &elem.faces {
-                if let (Some(&a), Some(&b), Some(&c)) =
-                    (local_idx.get(&face[0]), local_idx.get(&face[1]), local_idx.get(&face[2]))
-                {
+                if let (Some(&a), Some(&b), Some(&c)) = (
+                    local_idx.get(&face[0]),
+                    local_idx.get(&face[1]),
+                    local_idx.get(&face[2]),
+                ) {
                     faces.push([a, b, c]);
                 }
             }
@@ -763,11 +760,7 @@ pub fn export_nastran(doc: &Document, path: &Path) -> Result<FidelityReport, Nas
                 .map(|q| q.to_si())
                 .unwrap_or(0.0);
             let nu_val = mat.poisson_ratio.unwrap_or(0.0);
-            let rho_val = mat
-                .density
-                .as_ref()
-                .map(|q| q.to_si())
-                .unwrap_or(0.0);
+            let rho_val = mat.density.as_ref().map(|q| q.to_si()).unwrap_or(0.0);
 
             let e_str = if e_val == 0.0 {
                 String::new()
@@ -912,24 +905,18 @@ mod tests {
 
         assert_eq!(report.source_format, "nastran");
         assert_eq!(report.target_format, "exl");
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "GRID" && e.status == EntityStatus::Lossless)
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "CQUAD4" && e.status == EntityStatus::Lossless)
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "MAT1" && e.status == EntityStatus::Lossless)
-        );
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "GRID" && e.status == EntityStatus::Lossless));
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "CQUAD4" && e.status == EntityStatus::Lossless));
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "MAT1" && e.status == EntityStatus::Lossless));
         assert!(doc.provenance.tool_of_origin.is_some());
         assert_eq!(
             doc.provenance.tool_of_origin.as_ref().unwrap().name,
@@ -1212,12 +1199,10 @@ GRID,2,,1.0,0.0,0.0
             .iter()
             .find(|bc| matches!(bc.bc_type, BcType::FixedDisplacement));
         assert!(spc_bc.is_some());
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "FORCE" && e.status == EntityStatus::Dropped)
-        );
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "FORCE" && e.status == EntityStatus::Dropped));
     }
 
     #[test]
@@ -1257,30 +1242,22 @@ GRID,2,,1.0,0.0,0.0
         let report = export_nastran(&doc, &path).unwrap();
         assert_eq!(report.source_format, "exl");
         assert_eq!(report.target_format, "nastran");
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "vertices" && e.status == EntityStatus::Lossless)
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "faces" && e.status == EntityStatus::Lossless)
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "materials" && e.status == EntityStatus::Lossless)
-        );
-        assert!(
-            report
-                .entities
-                .iter()
-                .any(|e| e.entity == "fixed_BC" && e.status == EntityStatus::Lossless)
-        );
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "vertices" && e.status == EntityStatus::Lossless));
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "faces" && e.status == EntityStatus::Lossless));
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "materials" && e.status == EntityStatus::Lossless));
+        assert!(report
+            .entities
+            .iter()
+            .any(|e| e.entity == "fixed_BC" && e.status == EntityStatus::Lossless));
 
         let (imported, import_report) = import_nastran(&path).unwrap();
         assert_eq!(imported.parts.len(), 1);

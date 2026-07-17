@@ -54,12 +54,15 @@ fn step_to_exl() {
     assert!(output.status.success(), "convert failed: {:?}", output);
     assert!(out_exl.exists(), "out.exl does not exist");
     let exl_content = std::fs::read_to_string(&out_exl).unwrap();
-    assert!(exl_content.starts_with("#exl"), "out.exl does not start with #exl");
+    assert!(
+        exl_content.starts_with("#exl"),
+        "out.exl does not start with #exl"
+    );
 
     assert!(report_json.exists(), "report.json does not exist");
     let report_raw = std::fs::read_to_string(&report_json).unwrap();
-    let report: serde_json::Value = serde_json::from_str(&report_raw)
-        .expect("report.json is not valid JSON");
+    let report: serde_json::Value =
+        serde_json::from_str(&report_raw).expect("report.json is not valid JSON");
     let source_format = report
         .get("source_format")
         .and_then(|v| v.as_str())
@@ -116,7 +119,11 @@ fn stl_roundtrip_pipeline() {
 
     let count1 = extract_vertex_count(&stdout1);
     let count2 = extract_vertex_count(&stdout2);
-    assert_eq!(count1, count2, "vertex counts differ: {} vs {}", count1, count2);
+    assert_eq!(
+        count1, count2,
+        "vertex counts differ: {} vs {}",
+        count1, count2
+    );
 }
 
 fn extract_part_count(stdout: &str) -> usize {
@@ -202,7 +209,8 @@ fn validate_exit_codes() {
     );
     let strict_code = strict.status.code().unwrap_or(99);
     assert_eq!(
-        strict_code, 2,
+        strict_code,
+        2,
         "strict exit code was {} (expected 2)\nstdout: {}\nstderr: {}",
         strict_code,
         String::from_utf8_lossy(&strict.stdout),
@@ -218,11 +226,7 @@ fn diff_self_empty() {
     let b_exl = dir.join("b.exl");
 
     let o1 = run_in_dir(
-        &[
-            "convert",
-            input.to_str().unwrap(),
-            a_exl.to_str().unwrap(),
-        ],
+        &["convert", input.to_str().unwrap(), a_exl.to_str().unwrap()],
         &dir,
     );
     assert!(o1.status.success(), "first convert failed: {:?}", o1);
@@ -276,16 +280,9 @@ fn unknown_extension_fails() {
         &dir,
     );
     let code = output.status.code().unwrap_or(99);
-    assert_eq!(
-        code, 2,
-        "expected exit code 2, got {}",
-        code
-    );
+    assert_eq!(code, 2, "expected exit code 2, got {}", code);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        !stderr.is_empty(),
-        "expected stderr message, got empty"
-    );
+    assert!(!stderr.is_empty(), "expected stderr message, got empty");
 }
 
 #[test]
@@ -360,11 +357,18 @@ fn openfoam_export_roundtrip() {
         ],
         &dir,
     );
-    assert!(o1.status.success(), "stl->openfoam failed: stderr={}",
-        String::from_utf8_lossy(&o1.stderr));
+    assert!(
+        o1.status.success(),
+        "stl->openfoam failed: stderr={}",
+        String::from_utf8_lossy(&o1.stderr)
+    );
 
     assert!(of_case.is_dir(), "ofcase directory not created");
-    assert!(of_case.join("constant").join("polyMesh").join("points").exists());
+    assert!(of_case
+        .join("constant")
+        .join("polyMesh")
+        .join("points")
+        .exists());
 
     let cube3_exl = dir.join("cube3.exl");
     let o2 = run_in_dir(
@@ -375,8 +379,11 @@ fn openfoam_export_roundtrip() {
         ],
         &dir,
     );
-    assert!(o2.status.success(), "openfoam->exl failed: stderr={}",
-        String::from_utf8_lossy(&o2.stderr));
+    assert!(
+        o2.status.success(),
+        "openfoam->exl failed: stderr={}",
+        String::from_utf8_lossy(&o2.stderr)
+    );
 
     let info_ref = run_in_dir(&["info", cube3_exl.to_str().unwrap()], &dir);
     assert!(info_ref.status.success(), "info failed");

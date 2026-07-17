@@ -153,10 +153,7 @@ impl Quantity {
 
     pub fn convert_to(&self, target: Unit) -> Result<Quantity, String> {
         if self.unit.dimension() != target.dimension() {
-            return Err(format!(
-                "dimension mismatch: {} -> {}",
-                self.unit, target
-            ));
+            return Err(format!("dimension mismatch: {} -> {}", self.unit, target));
         }
         Ok(Quantity {
             value: self.to_si() / target.to_si_factor(),

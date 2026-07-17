@@ -21,7 +21,10 @@ fn parse_face_element(
         }
         if i > 0 {
             if i as usize > max {
-                return Err(FmtError::Parse(format!("index {} out of range (max {})", i, max)));
+                return Err(FmtError::Parse(format!(
+                    "index {} out of range (max {})",
+                    i, max
+                )));
             }
             Ok((i - 1) as u32)
         } else {
@@ -54,10 +57,7 @@ fn parse_face_element(
             };
             Ok((vi, ti, ni))
         }
-        _ => Err(FmtError::Parse(format!(
-            "invalid face element: {}",
-            token
-        ))),
+        _ => Err(FmtError::Parse(format!("invalid face element: {}", token))),
     }
 }
 
@@ -143,12 +143,8 @@ pub fn import_obj(path: &Path) -> Result<(Document, FidelityReport), FmtError> {
                 }
                 let mut vert_indices: Vec<u32> = Vec::with_capacity(raw_tokens.len());
                 for tok in &raw_tokens {
-                    let (vi, _ti, _ni) = parse_face_element(
-                        tok,
-                        positions.len(),
-                        normals.len(),
-                        uvs.len(),
-                    )?;
+                    let (vi, _ti, _ni) =
+                        parse_face_element(tok, positions.len(), normals.len(), uvs.len())?;
                     vert_indices.push(vi);
                 }
                 let tris = triangulate_fan(&vert_indices);
@@ -260,7 +256,12 @@ pub fn export_obj(doc: &Document, path: &Path) -> Result<FidelityReport, FmtErro
         }
 
         if mesh.uvs.is_some() {
-            report.record("uvs", 0, EntityStatus::Dropped, Some("uvs not exported (v0)".into()));
+            report.record(
+                "uvs",
+                0,
+                EntityStatus::Dropped,
+                Some("uvs not exported (v0)".into()),
+            );
         }
 
         let mut total_tris = 0usize;
@@ -291,13 +292,7 @@ pub fn export_obj(doc: &Document, path: &Path) -> Result<FidelityReport, FmtErro
                             tri[2] + 1
                         )?;
                     } else {
-                        writeln!(
-                            file,
-                            "f {} {} {}",
-                            tri[0] + 1,
-                            tri[1] + 1,
-                            tri[2] + 1
-                        )?;
+                        writeln!(file, "f {} {} {}", tri[0] + 1, tri[1] + 1, tri[2] + 1)?;
                     }
                     total_tris += 1;
                 }
@@ -319,13 +314,7 @@ pub fn export_obj(doc: &Document, path: &Path) -> Result<FidelityReport, FmtErro
                             tri[2] + 1
                         )?;
                     } else {
-                        writeln!(
-                            file,
-                            "f {} {} {}",
-                            tri[0] + 1,
-                            tri[1] + 1,
-                            tri[2] + 1
-                        )?;
+                        writeln!(file, "f {} {} {}", tri[0] + 1, tri[1] + 1, tri[2] + 1)?;
                     }
                     total_tris += 1;
                 }
@@ -344,20 +333,19 @@ pub fn export_obj(doc: &Document, path: &Path) -> Result<FidelityReport, FmtErro
                         tri[2] + 1
                     )?;
                 } else {
-                    writeln!(
-                        file,
-                        "f {} {} {}",
-                        tri[0] + 1,
-                        tri[1] + 1,
-                        tri[2] + 1
-                    )?;
+                    writeln!(file, "f {} {} {}", tri[0] + 1, tri[1] + 1, tri[2] + 1)?;
                 }
                 total_tris += 1;
             }
         }
 
         report.record("triangles", total_tris, EntityStatus::Lossless, None);
-        report.record("vertices", mesh.vertices.len(), EntityStatus::Lossless, None);
+        report.record(
+            "vertices",
+            mesh.vertices.len(),
+            EntityStatus::Lossless,
+            None,
+        );
     }
 
     Ok(report)

@@ -236,8 +236,8 @@ fn bbox_eq(a: &exl_core::geom::BoundingBox, b: &exl_core::geom::BoundingBox, tol
 mod tests {
     use super::*;
     use exl_core::geom::Mesh;
-    use exl_core::{Document, Part, GeometryPayload, BoundaryCondition, BcType, Material};
     use exl_core::units::{Quantity, Unit};
+    use exl_core::{BcType, BoundaryCondition, Document, GeometryPayload, Material, Part};
 
     fn make_doc(parts: Vec<Part>) -> Document {
         Document::new(parts)
@@ -276,16 +276,12 @@ mod tests {
         let cfd_findings = validate(&doc, Profile::Cfd);
         let mech_findings = validate(&doc, Profile::Mech);
 
-        assert!(
-            cfd_findings
-                .iter()
-                .any(|f| f.check == "not_watertight" && f.severity == Severity::Error)
-        );
-        assert!(
-            mech_findings
-                .iter()
-                .any(|f| f.check == "not_watertight" && f.severity == Severity::Warning)
-        );
+        assert!(cfd_findings
+            .iter()
+            .any(|f| f.check == "not_watertight" && f.severity == Severity::Error));
+        assert!(mech_findings
+            .iter()
+            .any(|f| f.check == "not_watertight" && f.severity == Severity::Warning));
     }
 
     #[test]
@@ -364,10 +360,14 @@ mod tests {
         let doc = make_doc(vec![part]);
 
         let strict_findings = validate(&doc, Profile::Strict);
-        assert!(strict_findings.iter().any(|f| f.check == "missing_tolerances"));
+        assert!(strict_findings
+            .iter()
+            .any(|f| f.check == "missing_tolerances"));
 
         let mech_findings = validate(&doc, Profile::Mech);
-        assert!(!mech_findings.iter().any(|f| f.check == "missing_tolerances"));
+        assert!(!mech_findings
+            .iter()
+            .any(|f| f.check == "missing_tolerances"));
     }
 
     #[test]

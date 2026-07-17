@@ -167,8 +167,7 @@ pub fn mesh_to_record_batches(meshes: &[(usize, &Mesh)]) -> Vec<RecordBatch> {
                 Arc::new(v_struct),
             ));
 
-            let flat_faces: Vec<u32> =
-                mesh.faces.iter().flat_map(|f| [f[0], f[1], f[2]]).collect();
+            let flat_faces: Vec<u32> = mesh.faces.iter().flat_map(|f| [f[0], f[1], f[2]]).collect();
             let faces_list: ArrayRef = Arc::new(make_list(
                 Field::new("item", DataType::UInt32, false),
                 Arc::new(UInt32Array::from(flat_faces)),

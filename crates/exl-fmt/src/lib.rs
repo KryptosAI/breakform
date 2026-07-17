@@ -32,7 +32,10 @@ pub(crate) fn iso8601_now() -> String {
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if m <= 2 { y + 1 } else { y };
-    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, m, d, hour, min, sec)
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        y, m, d, hour, min, sec
+    )
 }
 
 pub(crate) fn fresh_doc(parts: Vec<Part>, tool_name: &str) -> Document {
@@ -63,8 +66,8 @@ pub(crate) fn doc_meshes(doc: &Document) -> Result<Vec<(&Part, &Mesh)>, FmtError
     Ok(out)
 }
 
-mod stl;
 mod obj;
+mod stl;
 
-pub use stl::{export_stl, import_stl};
 pub use obj::{export_obj, import_obj};
+pub use stl::{export_stl, import_stl};
