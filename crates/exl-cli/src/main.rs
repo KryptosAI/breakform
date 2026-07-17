@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use clap::{Parser, Subcommand, ValueEnum};
@@ -58,11 +58,11 @@ enum ValidateProfile {
     Strict,
 }
 
-fn extension(path: &PathBuf) -> &str {
+fn extension(path: &Path) -> &str {
     path.extension().and_then(|e| e.to_str()).unwrap_or("")
 }
 
-fn import_doc(input: &PathBuf) -> Result<(Document, Option<exl_core::FidelityReport>), String> {
+fn import_doc(input: &Path) -> Result<(Document, Option<exl_core::FidelityReport>), String> {
     let ext = extension(input);
     match ext {
         "exl" | "exlb" => exl_io::load(input)
@@ -101,7 +101,7 @@ fn import_doc(input: &PathBuf) -> Result<(Document, Option<exl_core::FidelityRep
     }
 }
 
-fn load_native(path: &PathBuf) -> Result<Document, String> {
+fn load_native(path: &Path) -> Result<Document, String> {
     let ext = extension(path);
     match ext {
         "exl" | "exlb" => {

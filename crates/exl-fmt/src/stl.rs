@@ -57,6 +57,7 @@ fn read_le_u32(buf: &[u8], off: usize) -> u32 {
     u32::from_le_bytes(arr)
 }
 
+#[allow(clippy::type_complexity)]
 fn parse_stl_binary(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String), FmtError> {
     if data.len() < 84 {
         return Err(FmtError::Parse("binary STL too short".into()));
@@ -98,6 +99,7 @@ fn parse_stl_binary(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String
     Ok((vertices, faces, "binary_import".into()))
 }
 
+#[allow(clippy::type_complexity)]
 fn parse_stl_ascii(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String), FmtError> {
     let text = std::str::from_utf8(data)
         .map_err(|_| FmtError::Parse("STL file is not valid UTF-8".into()))?;
@@ -131,7 +133,7 @@ fn parse_stl_ascii(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String)
                     continue;
                 }
                 if inner.starts_with("vertex") {
-                    let parts: Vec<&str> = lines[i].trim().split_whitespace().collect();
+                    let parts: Vec<&str> = lines[i].split_whitespace().collect();
                     if parts.len() < 4 {
                         return Err(FmtError::Parse(format!(
                             "invalid vertex line: {}",
@@ -185,12 +187,10 @@ fn parse_stl_ascii(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String)
     Ok((vertices, faces, solid_name))
 }
 
+#[allow(clippy::type_complexity)]
 fn detect_and_parse_stl(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String), FmtError> {
     if data.len() >= 5 && &data[..5] == b"solid" {
-        match parse_stl_ascii(data) {
-            Ok(result) => return Ok(result),
-            Err(_) => {}
-        }
+        if let Ok(result) = parse_stl_ascii(data) { return Ok(result) }
     }
     parse_stl_binary(data)
 }

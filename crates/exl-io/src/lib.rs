@@ -354,11 +354,11 @@ fn read_buffer_f32_3d(
     if raw.len() % 4 != 0 {
         return Err(IoError::Parse("buffer length not multiple of 4".into()));
     }
-    if (raw.as_ptr() as usize) % 4 != 0 {
+    if !(raw.as_ptr() as usize).is_multiple_of(4) {
         return Err(IoError::Parse("buffer misaligned for f32".into()));
     }
     let f32s: &[f32] = bytemuck::cast_slice(raw);
-    if f32s.len() % 3 != 0 {
+    if !f32s.len().is_multiple_of(3) {
         return Err(IoError::Parse(
             "f32 buffer length not multiple of 3 for vec3".into(),
         ));
@@ -377,11 +377,11 @@ fn read_buffer_f32_2d(
     if raw.len() % 4 != 0 {
         return Err(IoError::Parse("buffer length not multiple of 4".into()));
     }
-    if (raw.as_ptr() as usize) % 4 != 0 {
+    if !(raw.as_ptr() as usize).is_multiple_of(4) {
         return Err(IoError::Parse("buffer misaligned for f32".into()));
     }
     let f32s: &[f32] = bytemuck::cast_slice(raw);
-    if f32s.len() % 2 != 0 {
+    if !f32s.len().is_multiple_of(2) {
         return Err(IoError::Parse(
             "f32 buffer length not multiple of 2 for vec2".into(),
         ));
@@ -400,11 +400,11 @@ fn read_buffer_u32_3d(
     if raw.len() % 4 != 0 {
         return Err(IoError::Parse("buffer length not multiple of 4".into()));
     }
-    if (raw.as_ptr() as usize) % 4 != 0 {
+    if !(raw.as_ptr() as usize).is_multiple_of(4) {
         return Err(IoError::Parse("buffer misaligned for u32".into()));
     }
     let u32s: &[u32] = bytemuck::cast_slice(raw);
-    if u32s.len() % 3 != 0 {
+    if !u32s.len().is_multiple_of(3) {
         return Err(IoError::Parse(
             "u32 buffer length not multiple of 3 for face".into(),
         ));
@@ -423,7 +423,7 @@ fn read_buffer_u32_flat(
     if raw.len() % 4 != 0 {
         return Err(IoError::Parse("buffer length not multiple of 4".into()));
     }
-    if (raw.as_ptr() as usize) % 4 != 0 {
+    if !(raw.as_ptr() as usize).is_multiple_of(4) {
         return Err(IoError::Parse("buffer misaligned for u32".into()));
     }
     let u32s: &[u32] = bytemuck::cast_slice(raw);
@@ -804,7 +804,7 @@ fn get_f32_slice<'a>(
             "buffer length not multiple of 4 for f32".into(),
         ));
     }
-    if (bytes.as_ptr() as usize) % 4 != 0 {
+    if !(bytes.as_ptr() as usize).is_multiple_of(4) {
         return Err(IoError::Parse("buffer misaligned for f32".into()));
     }
     Ok(bytemuck::cast_slice(bytes))
@@ -828,7 +828,7 @@ fn get_u32_slice<'a>(
             "buffer length not multiple of 4 for u32".into(),
         ));
     }
-    if (bytes.as_ptr() as usize) % 4 != 0 {
+    if !(bytes.as_ptr() as usize).is_multiple_of(4) {
         return Err(IoError::Parse("buffer misaligned for u32".into()));
     }
     Ok(bytemuck::cast_slice(bytes))

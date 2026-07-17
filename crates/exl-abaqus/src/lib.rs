@@ -64,10 +64,10 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
     let ts = iso_timestamp_now();
 
     writeln!(&mut out, "** Breakform Abaqus export\n** Generated: {}", ts)
-        .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
 
     writeln!(&mut out, "*NODE")
-        .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
 
     for (pi, part) in doc.parts.iter().enumerate() {
         if let GeometryPayload::Mesh(mesh) = &part.geometry {
@@ -81,13 +81,13 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
                     v[1],
                     v[2]
                 )
-                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             }
         }
     }
 
     writeln!(&mut out, "*ELEMENT, TYPE=S3")
-        .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
 
     for (pi, part) in doc.parts.iter().enumerate() {
         if let GeometryPayload::Mesh(mesh) = &part.geometry {
@@ -101,7 +101,7 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
                     info.node_base + face[1],
                     info.node_base + face[2]
                 )
-                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             }
         }
     }
@@ -109,17 +109,16 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
     let mut mat_written = false;
     for part in &doc.parts {
         for mat in &part.semantics.materials {
-            if mat.elastic_modulus.is_some() {
-                let e_mod = mat.elastic_modulus.as_ref().unwrap();
+            if let Some(e_mod) = mat.elastic_modulus.as_ref() {
                 let nu = mat.poisson_ratio.unwrap_or(0.3);
                 writeln!(&mut out, "*MATERIAL, NAME=BREAKFORM_MAT").map_err(|e| {
-                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    AbaqusError::Io(std::io::Error::other(e))
                 })?;
                 writeln!(&mut out, "*ELASTIC").map_err(|e| {
-                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    AbaqusError::Io(std::io::Error::other(e))
                 })?;
                 writeln!(&mut out, "{}, {}", e_mod.value, nu).map_err(|e| {
-                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    AbaqusError::Io(std::io::Error::other(e))
                 })?;
                 mat_written = true;
                 break;
@@ -167,22 +166,22 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
 
     if !boundary_lines.is_empty() || !dload_lines.is_empty() {
         writeln!(&mut out, "*STEP")
-            .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
         if !boundary_lines.is_empty() {
             writeln!(&mut out, "*BOUNDARY")
-                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             for line in &boundary_lines {
                 writeln!(&mut out, "{}", line).map_err(|e| {
-                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    AbaqusError::Io(std::io::Error::other(e))
                 })?;
             }
         }
         if !dload_lines.is_empty() {
             writeln!(&mut out, "*DLOAD")
-                .map_err(|e| AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             for line in &dload_lines {
                 writeln!(&mut out, "{}", line).map_err(|e| {
-                    AbaqusError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    AbaqusError::Io(std::io::Error::other(e))
                 })?;
             }
         }
@@ -387,7 +386,9 @@ struct DloadRecord {
     pressure: f64,
 }
 
+#[allow(unused_assignments)]
 fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> {
+
     let lines = preprocess_lines(input);
     if lines.is_empty() {
         return Err(AbaqusError::Parse("empty input".into()));
@@ -466,10 +467,10 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                 && !upper_stripped.contains("PRINT")
                 && !upper_stripped.contains("FILE")
             {
-                let elem_type = parse_parameter(&stripped, "TYPE")
+                let elem_type = parse_parameter(stripped, "TYPE")
                     .unwrap_or_default()
                     .to_uppercase();
-                let elset = parse_parameter(&stripped, "ELSET");
+                let elset = parse_parameter(stripped, "ELSET");
 
                 i += 1;
                 while i < lines.len() && !lines[i].starts_with('*') {
@@ -497,7 +498,7 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
 
             if upper_stripped.starts_with("MATERIAL") {
                 let name =
-                    parse_parameter(&stripped, "NAME").unwrap_or_else(|| "UNNAMED".to_string());
+                    parse_parameter(stripped, "NAME").unwrap_or_else(|| "UNNAMED".to_string());
                 current_material_name = Some(name.clone());
                 materials.entry(name.clone()).or_insert_with(|| Material {
                     name: name.clone(),
@@ -561,8 +562,8 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
             }
 
             if upper_stripped.starts_with("SOLID SECTION") {
-                let elset = parse_parameter(&stripped, "ELSET");
-                let mat = parse_parameter(&stripped, "MATERIAL");
+                let elset = parse_parameter(stripped, "ELSET");
+                let mat = parse_parameter(stripped, "MATERIAL");
                 if let (Some(es), Some(m)) = (elset, mat) {
                     elset_material.insert(es.to_uppercase(), m);
                 }
@@ -797,7 +798,7 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
             .map(|nid| node_index.get(nid).copied().unwrap_or(usize::MAX))
             .collect();
 
-        if nids.iter().any(|&v| v == usize::MAX) {
+        if nids.contains(&usize::MAX) {
             continue;
         }
 
@@ -837,14 +838,13 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                 faces.push([a, b, c]);
                 face_groups.push(gid);
             }
-        } else if et == "S3" || et == "S3R" {
-            if nids.len() >= 3 {
+        } else if (et == "S3" || et == "S3R")
+            && nids.len() >= 3 {
                 let gname = "S3".to_string();
                 let gid = get_or_create_group(&gname);
                 faces.push([nids[0] as u32, nids[1] as u32, nids[2] as u32]);
                 face_groups.push(gid);
             }
-        }
     }
 
     let material_list: Vec<Material> = materials.values().cloned().collect();
@@ -859,11 +859,10 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
         }
     }
 
-    if part_materials.is_empty() {
-        if !nodes.is_empty() {
+    if part_materials.is_empty()
+        && !nodes.is_empty() {
             part_materials.push((part_name.clone(), material_list));
         }
-    }
 
     if part_materials.len() > 1 {
         fidelity.record(
@@ -887,8 +886,10 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
             mesh.group_names = group_names.clone();
         }
 
-        let mut semantics = exl_core::Semantics::default();
-        semantics.materials = mats.clone();
+        let mut semantics = exl_core::Semantics {
+            materials: mats.clone(),
+            ..Default::default()
+        };
 
         let node_to_faces: HashMap<usize, Vec<usize>> = {
             let mut mm: HashMap<usize, Vec<usize>> = HashMap::new();

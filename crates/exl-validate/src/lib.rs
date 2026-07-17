@@ -111,8 +111,8 @@ pub fn validate(doc: &Document, profile: Profile) -> Vec<Finding> {
             }
         }
 
-        if matches!(profile, Profile::Fea | Profile::Strict) {
-            if part.semantics.materials.is_empty() {
+        if matches!(profile, Profile::Fea | Profile::Strict)
+            && part.semantics.materials.is_empty() {
                 findings.push(Finding {
                     check: "missing_material".into(),
                     severity: Severity::Warning,
@@ -120,10 +120,9 @@ pub fn validate(doc: &Document, profile: Profile) -> Vec<Finding> {
                     part: Some(part.id.clone()),
                 });
             }
-        }
 
-        if profile == Profile::Strict {
-            if part.semantics.tolerances.is_none() {
+        if profile == Profile::Strict
+            && part.semantics.tolerances.is_none() {
                 findings.push(Finding {
                     check: "missing_tolerances".into(),
                     severity: Severity::Warning,
@@ -131,7 +130,6 @@ pub fn validate(doc: &Document, profile: Profile) -> Vec<Finding> {
                     part: Some(part.id.clone()),
                 });
             }
-        }
     }
 
     findings

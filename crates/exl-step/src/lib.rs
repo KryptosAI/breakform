@@ -921,7 +921,7 @@ fn build_brep(entities: &HashMap<String, Vec<Entity>>) -> (BRep, Consumed, HashM
     let mut faces: Vec<BrepFace> = Vec::new();
 
     let mut entity_counts: HashMap<String, usize> = HashMap::new();
-    for (_, sub) in entities {
+    for sub in entities.values() {
         for entity in sub {
             *entity_counts.entry(entity.name.clone()).or_insert(0) += 1;
         }
@@ -1035,7 +1035,7 @@ fn build_brep(entities: &HashMap<String, Vec<Entity>>) -> (BRep, Consumed, HashM
 
 fn find_solid_face_groups(entities: &HashMap<String, Vec<Entity>>) -> Vec<(String, Vec<String>)> {
     let mut solids: Vec<(String, Vec<String>)> = Vec::new();
-    for (_id, sub) in entities {
+    for sub in entities.values() {
         for entity in sub {
             if entity.name == "MANIFOLD_SOLID_BREP" && entity.args.len() >= 2 {
                 let solid_name = if let StepValue::Str(ref s) = entity.args[0] {
@@ -1142,10 +1142,9 @@ fn resolve_product_name_from_def(
         if let StepValue::Ref(form_ref) = &prod_def.args[2] {
             let form = entities.get(form_ref)?;
             for fe in form {
-                if fe.name == "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE"
-                    || fe.name == "PRODUCT_DEFINITION_FORMATION"
-                {
-                    if fe.args.len() >= 3 {
+                if (fe.name == "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE"
+                    || fe.name == "PRODUCT_DEFINITION_FORMATION")
+                    && fe.args.len() >= 3 {
                         if let StepValue::Ref(prod_ref) = &fe.args[2] {
                             let product = find_entity_named(entities, prod_ref, "PRODUCT")?;
                             if product.args.len() >= 2 {
@@ -1157,7 +1156,6 @@ fn resolve_product_name_from_def(
                             }
                         }
                     }
-                }
             }
         }
     }
@@ -1170,7 +1168,7 @@ fn parse_assembly_instances(
 ) -> Vec<Instance> {
     let mut instances: Vec<Instance> = Vec::new();
 
-    for (_id, sub) in entities {
+    for sub in entities.values() {
         for entity in sub {
             if entity.name != "NEXT_ASSEMBLY_USAGE_OCCURRENCE" {
                 continue;
@@ -1192,7 +1190,7 @@ fn parse_assembly_instances(
 
             let mut transform = Transform::identity();
 
-            for (_, rel_sub) in entities {
+            for rel_sub in entities.values() {
                 for rel_entity in rel_sub {
                     if rel_entity.name == "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION"
                         && rel_entity.args.len() >= 3
@@ -1401,8 +1399,7 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
 
     let curve_captured: std::collections::HashSet<&String> = edge_group_set
         .iter()
-        .filter(|eid| full_brep.curve_params.contains_key(**eid))
-        .map(|&s| s)
+        .filter(|eid| full_brep.curve_params.contains_key(**eid)).copied()
         .collect();
 
     let mut report = FidelityReport::new("step", "exl");

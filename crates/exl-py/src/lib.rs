@@ -18,7 +18,7 @@ fn is_openfoam_case(p: &str) -> bool {
 }
 
 #[pyfunction]
-fn convert(input: &str, output: &str) -> PyResult<String> {
+fn convert(input: &str, output: &str, fidelity_report: Option<&str>) -> PyResult<String> {
     let in_ext = extension(input);
     let out_ext = extension(output);
 
@@ -109,6 +109,11 @@ fn convert(input: &str, output: &str) -> PyResult<String> {
         (Some(r), None) | (None, Some(r)) => serde_json::to_string(&vec![r]).unwrap(),
         (None, None) => "[]".to_string(),
     };
+
+    if let Some(report_path) = fidelity_report {
+        std::fs::write(report_path, &json)
+            .map_err(|e| PyValueError::new_err(format!("failed to write fidelity report: {}", e)))?;
+    }
 
     Ok(json)
 }

@@ -298,7 +298,7 @@ pub fn record_batches_to_meshes(batches: &[RecordBatch]) -> Vec<(usize, Mesh)> {
                 .as_any()
                 .downcast_ref::<UInt32Array>()
                 .expect("face_groups inner is UInt32Array");
-            let face_groups = if fg_arr.len() > 0 {
+            let face_groups = if !fg_arr.is_empty() {
                 Some(fg_arr.values().to_vec())
             } else {
                 None

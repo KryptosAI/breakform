@@ -332,7 +332,7 @@ fn parse_boundary_content(content: &str) -> Result<Vec<Patch>, OpenfoamError> {
     let mut r = CharReader::new(content);
     r.skip_foam_header()?;
     r.skip_whitespace();
-    if r.peek().map_or(false, |c| c.is_ascii_digit()) {
+    if r.peek().is_some_and(|c| c.is_ascii_digit()) {
         r.read_usize()?;
         r.skip_whitespace();
     }
@@ -419,8 +419,7 @@ fn build_boundary_mesh(
 
     for (patch_idx, patch) in patches.iter().enumerate() {
         group_names.push(patch.name.clone());
-        for face_idx in patch.start_face..patch.start_face + patch.n_faces {
-            let face_verts = &faces[face_idx];
+        for face_verts in faces.iter().skip(patch.start_face).take(patch.n_faces) {
             let triangles = fan_triangulate(face_verts);
             for tri in &triangles {
                 let mut new_tri = [0u32; 3];
@@ -474,8 +473,8 @@ fn extract_nu(content: &str) -> Option<String> {
 fn extract_keyword(content: &str, key: &str) -> Option<String> {
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with(key) {
-            let rest = trimmed[key.len()..].trim();
+        if let Some(rest) = trimmed.strip_prefix(key) {
+            let rest = rest.trim();
             if rest.is_empty() {
                 continue;
             }
@@ -796,9 +795,7 @@ pub fn export_openfoam(doc: &Document, case_dir: &Path) -> Result<FidelityReport
     };
 
     if all_face_groups.is_empty() {
-        for _ in 0..n_faces {
-            all_face_groups.push(0);
-        }
+        all_face_groups.resize(all_face_groups.len() + n_faces, 0);
         if all_group_names.is_empty() {
             all_group_names.push("default".into());
         }

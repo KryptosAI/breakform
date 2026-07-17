@@ -68,7 +68,7 @@ fn parse_float(s: &str) -> Option<f64> {
     if s.is_empty() {
         return None;
     }
-    let s = s.replace('D', "E").replace('d', "E");
+    let s = s.replace(['D', 'd'], "E");
     s.parse().ok()
 }
 
@@ -153,7 +153,7 @@ fn extract_small_fields(card: &RawCard) -> Vec<String> {
         let start = if line.starts_with(' ') || line.starts_with('+') {
             0
         } else {
-            line.find(',').map(|p| p).unwrap_or(8.min(line.len()))
+            line.find(',').unwrap_or(8.min(line.len()))
         };
         let rest = &line[start..];
         let rest = rest.trim_start_matches(',');
@@ -188,11 +188,11 @@ fn get_field(fields: &[String], idx: usize) -> Option<&str> {
 }
 
 fn get_float(fields: &[String], idx: usize) -> Option<f64> {
-    get_field(fields, idx).and_then(|s| parse_float(s))
+    get_field(fields, idx).and_then(parse_float)
 }
 
 fn get_int(fields: &[String], idx: usize) -> Option<i64> {
-    get_field(fields, idx).and_then(|s| parse_int(s))
+    get_field(fields, idx).and_then(parse_int)
 }
 
 fn parse_grid(fields: &[String]) -> Option<(i64, [f64; 3], bool)> {

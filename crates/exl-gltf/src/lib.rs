@@ -393,7 +393,7 @@ pub fn import_gltf(path: &Path) -> Result<(Document, FidelityReport), GltfError>
             _ => {}
         }
         offset = chunk_end;
-        if offset % 4 != 0 {
+        if !offset.is_multiple_of(4) {
             offset += 4 - offset % 4;
         }
     }
@@ -816,7 +816,7 @@ pub fn export_gltf(doc: &Document, path: &Path) -> Result<FidelityReport, GltfEr
                     }));
                 }
 
-                let has_fg = mesh.face_groups.as_ref().map_or(false, |fg| !fg.is_empty());
+                let has_fg = mesh.face_groups.as_ref().is_some_and(|fg| !fg.is_empty());
                 let has_gn = !mesh.group_names.is_empty();
                 if has_fg || has_gn {
                     fid.record(
@@ -877,16 +877,12 @@ pub fn export_gltf(doc: &Document, path: &Path) -> Result<FidelityReport, GltfEr
     out.extend_from_slice(&(json_chunk_len as u32).to_le_bytes());
     out.extend_from_slice(&0x4E4F534Au32.to_le_bytes());
     out.extend_from_slice(json_bytes);
-    for _ in 0..json_pad {
-        out.push(0x20u8);
-    }
+    out.resize(out.len() + json_pad, 0x20u8);
 
     out.extend_from_slice(&(bin_chunk_len as u32).to_le_bytes());
     out.extend_from_slice(&0x004E4942u32.to_le_bytes());
     out.extend_from_slice(&buffer_data);
-    for _ in 0..bin_pad {
-        out.push(0x00u8);
-    }
+    out.resize(out.len() + bin_pad, 0x00u8);
 
     std::fs::write(path, out)?;
 
