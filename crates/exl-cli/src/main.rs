@@ -9,7 +9,7 @@ use exl_validate::{validate, Finding, Profile, Severity};
 #[derive(Parser)]
 #[command(
     name = "bf",
-    version = "0.2.0",
+    version = "1.0.0",
     about = "Breakform — Break the format. Keep the truth.",
     long_about = "Breakform — Break the format. Keep the truth.\n\nConvert, validate, diff, and inspect engineering data with honest fidelity reports."
 )]

@@ -5,16 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-07-18
 
 ### Added
+- Python: `exl.info(path, format='text'|'json')` binding
+- Python: `exl.convert()` now accepts `format_from=` and `format_to=` kwargs
+- Python: `exl.convert()` now accepts `fidelity_report=` kwarg to write fidelity report to disk
+- Real-world STEP corpus organized under `corpus/real/step/` (10 files)
+- Integration install paths documented in README
 
-- Real-world corpus expansion
-- Solver deck converters (Nastran, Abaqus, OpenFOAM)
-- Arrow IPC binary layout
-- Anchor integrations
+### Changed
+- CI: fmt and clippy jobs are now strict (removed `continue-on-error`)
+- CI: `macos-13` runner replaced with `macos-latest` (cross-compile x86_64)
+- Wheels: fixed manylinux compliance (`pyo3/extension-module` feature)
+- Benchmark runner scans subdirectories for real-world corpus files
+- All clippy lints resolved workspace-wide
 
-## [0.2.1] - 2026-07-16
+### Fixed
+- Wheels workflow: `fail-fast: false` so one platform failure doesn't cancel others
+- `exl-step`: collapsible_match lint suppressed (toolchain-version-sensitive)
+- `cargo fmt` pass across entire workspace
+
+## [0.2.2] - 2026-07-17
 
 ### Added
 - meshio Python bridge: 27 import formats + 28 export formats (ANSYS, Exodus, Gmsh, VTK/VTU, XDMF, CGNS, MED, and 20+ more)

@@ -156,4 +156,4 @@ Apache-2.0
 
 ## Status
 
-v0.2 pre-alpha — schema and APIs are unstable.
+v1.0 — stable schema and APIs.
