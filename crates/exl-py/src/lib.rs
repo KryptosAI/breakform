@@ -18,9 +18,16 @@ fn is_openfoam_case(p: &str) -> bool {
 }
 
 #[pyfunction]
-fn convert(input: &str, output: &str, fidelity_report: Option<&str>) -> PyResult<String> {
-    let in_ext = extension(input);
-    let out_ext = extension(output);
+#[pyo3(signature = (input, output, *, fidelity_report=None, format_from=None, format_to=None))]
+fn convert(
+    input: &str,
+    output: &str,
+    fidelity_report: Option<&str>,
+    format_from: Option<&str>,
+    format_to: Option<&str>,
+) -> PyResult<String> {
+    let in_ext = format_from.unwrap_or_else(|| extension(input));
+    let out_ext = format_to.unwrap_or_else(|| extension(output));
 
     if matches!(out_ext, "step" | "stp") {
         return Err(PyValueError::new_err(
@@ -162,6 +169,59 @@ fn save_document(json: &str, path: &str) -> PyResult<String> {
     Ok(doc.provenance.content_hash)
 }
 
+#[pyfunction]
+#[pyo3(signature = (path, *, format="text"))]
+fn info(path: &str, format: &str) -> PyResult<String> {
+    let doc = exl_io::load(Path::new(path))
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    if format == "json" {
+        return serde_json::to_string_pretty(&doc)
+            .map_err(|e| PyValueError::new_err(e.to_string()));
+    }
+
+    let stem = Path::new(path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown");
+
+    let mut out = String::new();
+    out.push_str(&format!("name: {}\n", stem));
+    out.push_str(&format!("schema_version: {}\n", doc.schema_version));
+    out.push_str(&format!("content_hash: {}\n", doc.provenance.content_hash));
+    out.push_str(&format!("part count: {}\n", doc.parts.len()));
+
+    for part in &doc.parts {
+        out.push_str(&format!("  {}: {}", part.id, part.name));
+        match &part.geometry {
+            exl_core::GeometryPayload::Mesh(m) => {
+                out.push_str(&format!(" — mesh (verts={}, faces={})", m.vertices.len(), m.faces.len()));
+                if m.is_watertight() {
+                    out.push_str(" watertight");
+                }
+            }
+            exl_core::GeometryPayload::Brep(b) => {
+                out.push_str(&format!(
+                    " — brep (verts={}, edges={}, faces={})",
+                    b.vertices.len(),
+                    b.edges.len(),
+                    b.faces.len()
+                ));
+            }
+        }
+
+        if let Some(bb) = &part.bounding_box {
+            out.push_str(&format!(
+                " bbox=[{:.3},{:.3},{:.3}][{:.3},{:.3},{:.3}]",
+                bb.min[0], bb.min[1], bb.min[2], bb.max[0], bb.max[1], bb.max[2],
+            ));
+        }
+        out.push('\n');
+    }
+
+    Ok(out)
+}
+
 #[pymodule]
 fn exl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(convert, m)?)?;
@@ -170,6 +230,7 @@ fn exl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(diff, m)?)?;
     m.add_function(wrap_pyfunction!(content_hash, m)?)?;
     m.add_function(wrap_pyfunction!(save_document, m)?)?;
+    m.add_function(wrap_pyfunction!(info, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

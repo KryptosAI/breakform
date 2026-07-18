@@ -1,4 +1,4 @@
-from .exl import convert, load_json, validate, diff, content_hash, save_document
+from .exl import convert, load_json, validate, diff, content_hash, save_document, info
 
 __version__ = "0.1.2"
 

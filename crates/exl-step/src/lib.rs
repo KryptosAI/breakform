@@ -685,12 +685,9 @@ fn resolve_surface_params(
                         .map(|row| {
                             if let StepValue::List(refs) = row {
                                 refs.iter()
-                                    .filter_map(|v| {
-                                        if let StepValue::Ref(r) = v {
-                                            get_point(entities, r)
-                                        } else {
-                                            None
-                                        }
+                                    .filter_map(|v| match v {
+                                        StepValue::Ref(r) => get_point(entities, r),
+                                        _ => None,
                                     })
                                     .collect()
                             } else {
@@ -1052,12 +1049,9 @@ fn find_solid_face_groups(entities: &HashMap<String, Vec<Entity>>) -> Vec<(Strin
                         if let StepValue::List(face_refs) = &shell_entity.args[1] {
                             let face_ids: Vec<String> = face_refs
                                 .iter()
-                                .filter_map(|v| {
-                                    if let StepValue::Ref(r) = v {
-                                        Some(r.clone())
-                                    } else {
-                                        None
-                                    }
+                                .filter_map(|v| match v {
+                                    StepValue::Ref(r) => Some(r.clone()),
+                                    _ => None,
                                 })
                                 .collect();
                             solids.push((solid_name, face_ids));
