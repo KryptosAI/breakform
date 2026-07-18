@@ -451,7 +451,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "exl-abaqus"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "exl-geom",
@@ -462,7 +462,7 @@ dependencies = [
 
 [[package]]
 name = "exl-arrow"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "arrow",
  "exl-core",
@@ -473,7 +473,7 @@ dependencies = [
 
 [[package]]
 name = "exl-cli"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "clap",
  "exl-abaqus",
@@ -491,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "exl-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "blake3",
  "exl-geom",
@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "exl-diff"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "serde",
@@ -513,7 +513,7 @@ dependencies = [
 
 [[package]]
 name = "exl-fmt"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "serde",
@@ -523,14 +523,14 @@ dependencies = [
 
 [[package]]
 name = "exl-geom"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "exl-gltf"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "serde",
@@ -540,7 +540,7 @@ dependencies = [
 
 [[package]]
 name = "exl-io"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "arrow",
  "bytemuck",
@@ -554,7 +554,7 @@ dependencies = [
 
 [[package]]
 name = "exl-nastran"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "exl-geom",
@@ -565,7 +565,7 @@ dependencies = [
 
 [[package]]
 name = "exl-openfoam"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "exl-geom",
@@ -576,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "exl-step"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "serde",
@@ -586,7 +586,7 @@ dependencies = [
 
 [[package]]
 name = "exl-validate"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "exl-core",
  "serde",
