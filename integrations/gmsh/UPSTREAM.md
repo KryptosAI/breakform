@@ -1,14 +1,25 @@
 ## Add Breakform (.exl) I/O plugin for Gmsh
 
-### Description
+### Status: Shipped as user-installed plugin
 
-Breakform is an open, vendor-neutral engineering data format that preserves
-mesh geometry, boundary conditions, materials, and a signed fidelity report in
-every file. It targets interoperability between FEA, CFD, and CAM tools.
+The plugin is self-contained in `breakform_gmsh.py` and works with Gmsh's
+Python plugin system. Users install it via:
 
-This plugin adds native `.exl` import and export to Gmsh via the existing
-Python plugin system. Both text (`.exl`) and binary (`.exlb`) formats are
-supported.
+```bash
+pip install breakform[gmsh]
+```
+
+This places the plugin in Gmsh's plugin search path automatically.
+
+### Submission target
+
+Gmsh uses GitLab at https://gitlab.onelab.info/gmsh/gmsh. Upstream inclusion
+requires the plugin to be self-contained (no external dependencies). Since
+this plugin depends on the `breakform` Python package, it is distributed
+alongside the Breakform SDK rather than submitted as an upstream merge request.
+
+If Gmsh ships `breakform` as a bundled dependency in the future, this plugin
+can be submitted as an MR at that time.
 
 ### What the plugin does
 

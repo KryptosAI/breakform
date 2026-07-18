@@ -109,8 +109,34 @@ python scripts/gen_corpus.py
 
 ## Integrations
 
-- [Gmsh plugin](integrations/gmsh/) — import/export .exl directly in the Gmsh mesher
-- [FreeCAD workbench](integrations/freecad/) — Import/Export .exl + fidelity report viewer panel
+### Gmsh — mesh I/O plugin
+
+```bash
+pip install breakform[gmsh]
+```
+
+Installs the Gmsh plugin automatically. Import `.exl` / `.exlb` files via
+**File > Open** or export via **File > Export**. Boundary conditions are
+mapped to physical groups; fidelity reports are shown in a summary dialog.
+
+See [integrations/gmsh/](integrations/gmsh/) for details.
+
+### FreeCAD — import/export workbench
+
+Copy the workbench into FreeCAD's Mod directory:
+
+```bash
+# macOS
+ln -s "$(pwd)/integrations/freecad" ~/Library/Preferences/FreeCAD/Mod/Breakform
+# Linux
+ln -s "$(pwd)/integrations/freecad" ~/.local/share/FreeCAD/Mod/Breakform
+```
+
+Restart FreeCAD and select **Breakform** from the workbench dropdown.
+Import `.exl` / `.exlb` files, export selected objects, and view fidelity
+reports. Requires `pip install breakform`.
+
+See [integrations/freecad/](integrations/freecad/) for details.
 
 ## Specification
 

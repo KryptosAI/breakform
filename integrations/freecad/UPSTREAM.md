@@ -1,15 +1,20 @@
 ## Add Breakform workbench to FreeCAD Addons
 
-### Title
+### Status: Shipped as standalone workbench
 
-Breakform — Engineering data interchange with fidelity tracking
+The workbench files in this directory (`Init.py`, `InitGui.py`, `import_exl.py`,
+`export_exl.py`, `fidelity_viewer.py`) form a complete FreeCAD workbench.
 
-### Description
+### Submission target
 
-Breakform is an open format for FEA, CFD, and CAM data that embeds geometry,
-materials, boundary conditions, and a machine-verifiable fidelity report in
-every file. This FreeCAD workbench enables import and export of `.exl` and
-`.exlb` files directly from the Part or Mesh workbenches.
+FreeCAD Addons are managed at https://github.com/FreeCAD/FreeCAD-addons.
+To list this workbench, a separate Git repository containing these files
+must be published, then an entry added to the `.gitmodules` file in
+FreeCAD-addons via a pull request.
+
+This workbench depends on the `breakform` Python package (`pip install breakform`).
+The `pip install` step must be documented in the workbench README until
+FreeCAD bundles the package.
 
 ### Features
 
