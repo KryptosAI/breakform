@@ -66,8 +66,7 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
     writeln!(&mut out, "** Breakform Abaqus export\n** Generated: {}", ts)
         .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
 
-    writeln!(&mut out, "*NODE")
-        .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
+    writeln!(&mut out, "*NODE").map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
 
     for (pi, part) in doc.parts.iter().enumerate() {
         if let GeometryPayload::Mesh(mesh) = &part.geometry {
@@ -111,15 +110,12 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
         for mat in &part.semantics.materials {
             if let Some(e_mod) = mat.elastic_modulus.as_ref() {
                 let nu = mat.poisson_ratio.unwrap_or(0.3);
-                writeln!(&mut out, "*MATERIAL, NAME=BREAKFORM_MAT").map_err(|e| {
-                    AbaqusError::Io(std::io::Error::other(e))
-                })?;
-                writeln!(&mut out, "*ELASTIC").map_err(|e| {
-                    AbaqusError::Io(std::io::Error::other(e))
-                })?;
-                writeln!(&mut out, "{}, {}", e_mod.value, nu).map_err(|e| {
-                    AbaqusError::Io(std::io::Error::other(e))
-                })?;
+                writeln!(&mut out, "*MATERIAL, NAME=BREAKFORM_MAT")
+                    .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
+                writeln!(&mut out, "*ELASTIC")
+                    .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
+                writeln!(&mut out, "{}, {}", e_mod.value, nu)
+                    .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
                 mat_written = true;
                 break;
             }
@@ -165,24 +161,20 @@ pub fn export_abaqus(doc: &Document, path: &Path) -> Result<FidelityReport, Abaq
     }
 
     if !boundary_lines.is_empty() || !dload_lines.is_empty() {
-        writeln!(&mut out, "*STEP")
-            .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
+        writeln!(&mut out, "*STEP").map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
         if !boundary_lines.is_empty() {
             writeln!(&mut out, "*BOUNDARY")
                 .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             for line in &boundary_lines {
-                writeln!(&mut out, "{}", line).map_err(|e| {
-                    AbaqusError::Io(std::io::Error::other(e))
-                })?;
+                writeln!(&mut out, "{}", line)
+                    .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             }
         }
         if !dload_lines.is_empty() {
-            writeln!(&mut out, "*DLOAD")
-                .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
+            writeln!(&mut out, "*DLOAD").map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             for line in &dload_lines {
-                writeln!(&mut out, "{}", line).map_err(|e| {
-                    AbaqusError::Io(std::io::Error::other(e))
-                })?;
+                writeln!(&mut out, "{}", line)
+                    .map_err(|e| AbaqusError::Io(std::io::Error::other(e)))?;
             }
         }
     }
@@ -388,7 +380,6 @@ struct DloadRecord {
 
 #[allow(unused_assignments)]
 fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> {
-
     let lines = preprocess_lines(input);
     if lines.is_empty() {
         return Err(AbaqusError::Parse("empty input".into()));
@@ -838,13 +829,12 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
                 faces.push([a, b, c]);
                 face_groups.push(gid);
             }
-        } else if (et == "S3" || et == "S3R")
-            && nids.len() >= 3 {
-                let gname = "S3".to_string();
-                let gid = get_or_create_group(&gname);
-                faces.push([nids[0] as u32, nids[1] as u32, nids[2] as u32]);
-                face_groups.push(gid);
-            }
+        } else if (et == "S3" || et == "S3R") && nids.len() >= 3 {
+            let gname = "S3".to_string();
+            let gid = get_or_create_group(&gname);
+            faces.push([nids[0] as u32, nids[1] as u32, nids[2] as u32]);
+            face_groups.push(gid);
+        }
     }
 
     let material_list: Vec<Material> = materials.values().cloned().collect();
@@ -859,10 +849,9 @@ fn parse_abaqus(input: &str) -> Result<(Document, FidelityReport), AbaqusError> 
         }
     }
 
-    if part_materials.is_empty()
-        && !nodes.is_empty() {
-            part_materials.push((part_name.clone(), material_list));
-        }
+    if part_materials.is_empty() && !nodes.is_empty() {
+        part_materials.push((part_name.clone(), material_list));
+    }
 
     if part_materials.len() > 1 {
         fidelity.record(

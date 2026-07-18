@@ -190,7 +190,9 @@ fn parse_stl_ascii(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String)
 #[allow(clippy::type_complexity)]
 fn detect_and_parse_stl(data: &[u8]) -> Result<(Vec<[f32; 3]>, Vec<[u32; 3]>, String), FmtError> {
     if data.len() >= 5 && &data[..5] == b"solid" {
-        if let Ok(result) = parse_stl_ascii(data) { return Ok(result) }
+        if let Ok(result) = parse_stl_ascii(data) {
+            return Ok(result);
+        }
     }
     parse_stl_binary(data)
 }

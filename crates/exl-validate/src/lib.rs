@@ -111,25 +111,24 @@ pub fn validate(doc: &Document, profile: Profile) -> Vec<Finding> {
             }
         }
 
-        if matches!(profile, Profile::Fea | Profile::Strict)
-            && part.semantics.materials.is_empty() {
-                findings.push(Finding {
-                    check: "missing_material".into(),
-                    severity: Severity::Warning,
-                    message: "part has no materials assigned".into(),
-                    part: Some(part.id.clone()),
-                });
-            }
+        if matches!(profile, Profile::Fea | Profile::Strict) && part.semantics.materials.is_empty()
+        {
+            findings.push(Finding {
+                check: "missing_material".into(),
+                severity: Severity::Warning,
+                message: "part has no materials assigned".into(),
+                part: Some(part.id.clone()),
+            });
+        }
 
-        if profile == Profile::Strict
-            && part.semantics.tolerances.is_none() {
-                findings.push(Finding {
-                    check: "missing_tolerances".into(),
-                    severity: Severity::Warning,
-                    message: "tolerances not specified".into(),
-                    part: Some(part.id.clone()),
-                });
-            }
+        if profile == Profile::Strict && part.semantics.tolerances.is_none() {
+            findings.push(Finding {
+                check: "missing_tolerances".into(),
+                severity: Severity::Warning,
+                message: "tolerances not specified".into(),
+                part: Some(part.id.clone()),
+            });
+        }
     }
 
     findings

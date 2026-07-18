@@ -315,13 +315,10 @@ fn extract_first_string(content: &str, keyword: &str) -> Option<String> {
     parser.expect_str("(").ok()?;
     match parser.parse_value().ok()? {
         StepValue::Str(s) => Some(s),
-        StepValue::List(items) => items.first().and_then(|v| {
-            if let StepValue::Str(s) = v {
-                Some(s.clone())
-            } else {
-                None
-            }
-        }),
+        StepValue::List(items) => match items.first() {
+            Some(StepValue::Str(s)) => Some(s.clone()),
+            _ => None,
+        },
         _ => None,
     }
 }
@@ -445,12 +442,9 @@ fn extract_face_edges(entities: &HashMap<String, Vec<Entity>>, bounds: &StepValu
     let bound_refs: Vec<String> = match bounds {
         StepValue::List(items) => items
             .iter()
-            .filter_map(|v| {
-                if let StepValue::Ref(r) = v {
-                    Some(r.clone())
-                } else {
-                    None
-                }
+            .filter_map(|v| match v {
+                StepValue::Ref(r) => Some(r.clone()),
+                _ => None,
             })
             .collect(),
         StepValue::Ref(r) => vec![r.clone()],
@@ -1144,18 +1138,19 @@ fn resolve_product_name_from_def(
             for fe in form {
                 if (fe.name == "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE"
                     || fe.name == "PRODUCT_DEFINITION_FORMATION")
-                    && fe.args.len() >= 3 {
-                        if let StepValue::Ref(prod_ref) = &fe.args[2] {
-                            let product = find_entity_named(entities, prod_ref, "PRODUCT")?;
-                            if product.args.len() >= 2 {
-                                if let StepValue::Str(name) = &product.args[1] {
-                                    if !name.is_empty() {
-                                        return Some(name.clone());
-                                    }
+                    && fe.args.len() >= 3
+                {
+                    if let StepValue::Ref(prod_ref) = &fe.args[2] {
+                        let product = find_entity_named(entities, prod_ref, "PRODUCT")?;
+                        if product.args.len() >= 2 {
+                            if let StepValue::Str(name) = &product.args[1] {
+                                if !name.is_empty() {
+                                    return Some(name.clone());
                                 }
                             }
                         }
                     }
+                }
             }
         }
     }
@@ -1399,7 +1394,8 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
 
     let curve_captured: std::collections::HashSet<&String> = edge_group_set
         .iter()
-        .filter(|eid| full_brep.curve_params.contains_key(**eid)).copied()
+        .filter(|eid| full_brep.curve_params.contains_key(**eid))
+        .copied()
         .collect();
 
     let mut report = FidelityReport::new("step", "exl");
