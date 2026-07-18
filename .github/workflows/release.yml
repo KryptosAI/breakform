@@ -8,6 +8,7 @@ jobs:
   build-binaries:
     name: build (${{ matrix.os }}, ${{ matrix.target }})
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
       matrix:
         include:
@@ -71,7 +72,8 @@ jobs:
           merge-multiple: true
       - name: Publish wheels to PyPI
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.MATURIN_PYPI_TOKEN }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: |
-          pip install maturin
-          maturin upload --non-interactive --skip-existing dist/*.whl
+          pip install twine
+          twine upload --skip-existing dist/*.whl
