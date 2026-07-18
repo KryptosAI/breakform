@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_match)]
 use exl_core::{
     geom::{
         BRep, BrepEdge, BrepFace, BrepVertex, CurveParams, CurveType, SurfaceParams, SurfaceType,
