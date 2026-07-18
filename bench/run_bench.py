@@ -29,6 +29,7 @@ DASHBOARD_PATH = BENCH_DIR / "index.html"
 
 TIMEOUT_SEC = 30
 CORPUS_GLOBS = ["*.stl", "*.obj", "*.step", "*.stp", "*.glb", "*.bdf", "*.dat", "*.inp"]
+CORPUS_SUBDIRS = ["", "real/step", "real/nastran", "real/abaqus", "real/openfoam"]
 
 
 def find_binary():
@@ -89,10 +90,13 @@ def ensure_binary(skip_build=False):
 
 
 def gather_corpus_files():
-    """Glob corpus/ for all supported formats (files + OpenFOAM case dirs). Returns list of Path objects sorted by name."""
+    """Glob corpus/ (including subdirectories) for all supported formats. Returns list of Path objects sorted by name."""
     files = []
     for pattern in CORPUS_GLOBS:
         files.extend(CORPUS_DIR.glob(pattern))
+        for sub in CORPUS_SUBDIRS:
+            if sub:
+                files.extend((CORPUS_DIR / sub).glob(pattern))
     for d in sorted(CORPUS_DIR.iterdir()):
         if d.is_dir() and (d / "constant" / "polyMesh").exists():
             files.append(d)

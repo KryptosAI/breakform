@@ -2267,7 +2267,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_60() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/60-real-sg1-c5-214.step");
+            .join("../../corpus/real/step/60-real-sg1-c5-214.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 60 failed: {:?}", result.err());
     }
@@ -2275,7 +2275,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_61() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/61-real-io1-cm-214.step");
+            .join("../../corpus/real/step/61-real-io1-cm-214.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 61 failed: {:?}", result.err());
     }
@@ -2283,7 +2283,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_62() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/62-real-dm1-id-214.step");
+            .join("../../corpus/real/step/62-real-dm1-id-214.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 62 failed: {:?}", result.err());
     }
@@ -2291,7 +2291,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_63() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/63-real-ats1-out.step");
+            .join("../../corpus/real/step/63-real-ats1-out.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 63 failed: {:?}", result.err());
     }
@@ -2299,7 +2299,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_64() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/64-real-ats2-out.step");
+            .join("../../corpus/real/step/64-real-ats2-out.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 64 failed: {:?}", result.err());
     }
@@ -2307,7 +2307,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_65() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/65-real-ats3-out.step");
+            .join("../../corpus/real/step/65-real-ats3-out.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 65 failed: {:?}", result.err());
     }
@@ -2315,7 +2315,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_66() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/66-real-ats4-out.step");
+            .join("../../corpus/real/step/66-real-ats4-out.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 66 failed: {:?}", result.err());
     }
@@ -2323,7 +2323,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_67() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/67-real-ats7-out.step");
+            .join("../../corpus/real/step/67-real-ats7-out.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 67 failed: {:?}", result.err());
     }
@@ -2331,7 +2331,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_68() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/68-real-screw.step");
+            .join("../../corpus/real/step/68-real-screw.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 68 failed: {:?}", result.err());
     }
@@ -2339,7 +2339,7 @@ END-ISO-10303-21;
     #[test]
     fn import_corpus_69() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../corpus/69-real-as1-oc-214.step");
+            .join("../../corpus/real/step/69-real-as1-oc-214.step");
         let result = import_step(&path);
         assert!(result.is_ok(), "import of 69 failed: {:?}", result.err());
     }
