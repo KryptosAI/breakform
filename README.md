@@ -91,23 +91,17 @@ make bench
 
 ## Python
 
-Quickstart:
-
 ```bash
-pip install breakform              # core: convert, validate, diff
-pip install breakform[meshio]      # +27 mesh/solver formats via meshio
-pip install breakform[gmsh]        # Gmsh plugin
-pip install breakform[all]         # everything: meshio + Gmsh plugin
-python -c "import exl; exl.convert('model.step', 'model.exl')"
+pip install https://github.com/KryptosAI/breakform/releases/download/v1.0.4/breakform-1.0.4-cp39-abi3-macosx_11_0_arm64.whl
 ```
 
-> **Note:** The wheel bundles the Python bridge code but not the meshio or gmsh PyPI dependencies. To use meshio-based formats (ANSYS, Exodus, Gmsh, VTK/VTU, XDMF, CGNS, MED, and others), install with `pip install breakform[meshio]`.
+Replace the wheel name with your platform:
+- macOS ARM: `breakform-1.0.4-cp39-abi3-macosx_11_0_arm64.whl`
+- macOS Intel: `breakform-1.0.4-cp39-abi3-macosx_10_12_x86_64.whl`
+- Linux x86_64: `breakform-1.0.4-cp39-abi3-manylinux_2_34_x86_64.whl`
+- Windows x86_64: `breakform-1.0.4-cp39-abi3-win_amd64.whl`
 
-Development install:
-
-```bash
-cd crates/exl-py && maturin develop
-```
+All wheels are on the [releases page](https://github.com/KryptosAI/breakform/releases).
 
 ```python
 import exl
