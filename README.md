@@ -92,16 +92,15 @@ make bench
 ## Python
 
 ```bash
-pip install https://github.com/KryptosAI/breakform/releases/download/v1.0.4/breakform-1.0.4-cp39-abi3-macosx_11_0_arm64.whl
+pip install breakform-cli
 ```
 
-Replace the wheel name with your platform:
-- macOS ARM: `breakform-1.0.4-cp39-abi3-macosx_11_0_arm64.whl`
-- macOS Intel: `breakform-1.0.4-cp39-abi3-macosx_10_12_x86_64.whl`
-- Linux x86_64: `breakform-1.0.4-cp39-abi3-manylinux_2_34_x86_64.whl`
-- Windows x86_64: `breakform-1.0.4-cp39-abi3-win_amd64.whl`
+```python
+import exl
+exl.convert("model.step", "model.exl")
+```
 
-All wheels are on the [releases page](https://github.com/KryptosAI/breakform/releases).
+Wheels are also available on the [releases page](https://github.com/KryptosAI/breakform/releases).
 
 ```python
 import exl
