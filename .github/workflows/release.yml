@@ -35,10 +35,17 @@ jobs:
       - name: rename binary
         shell: bash
         run: |
-          mv target/${{ matrix.target }}/release/bf target/${{ matrix.target }}/release/bf-${{ matrix.target }}
+          BIN=target/${{ matrix.target }}/release/bf
+          if [ -f "$BIN.exe" ]; then
+            mv "$BIN.exe" "target/${{ matrix.target }}/release/bf-${{ matrix.target }}.exe"
+          else
+            mv "$BIN" "target/${{ matrix.target }}/release/bf-${{ matrix.target }}"
+          fi
       - uses: softprops/action-gh-release@v2
         with:
-          files: target/${{ matrix.target }}/release/bf-${{ matrix.target }}
+          files: |
+            target/${{ matrix.target }}/release/bf-${{ matrix.target }}
+            target/${{ matrix.target }}/release/bf-${{ matrix.target }}.exe
 
   build-wheels:
     strategy:
