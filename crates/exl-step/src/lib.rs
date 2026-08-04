@@ -11,6 +11,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::time::SystemTime;
 
+mod step_io_fallback;
+
 #[derive(Debug, thiserror::Error)]
 pub enum StepError {
     #[error("I/O error: {0}")]
@@ -1332,6 +1334,28 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
     let entities = parse_data_section(&data_section)?;
 
     let (full_brep, consumed, entity_counts) = build_brep(&entities);
+
+    if full_brep.faces.is_empty() && full_brep.edges.is_empty() && full_brep.vertices.is_empty() {
+        let raw = content.as_bytes();
+        let fallback_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
+        match step_io_fallback::import_step_io(raw, fallback_name) {
+            Ok((parts, fid)) => {
+                let mut doc = Document::new(parts);
+                let timestamp = system_time_to_iso(SystemTime::now());
+                doc.provenance.tool_of_origin = Some(ToolOfOrigin {
+                    name: "exl-step (step-io bridge)".into(),
+                    version: env!("CARGO_PKG_VERSION").into(),
+                    timestamp_iso: timestamp,
+                });
+                doc.provenance.conversion_fidelity = Some(fid.overall);
+                return Ok((doc, fid));
+            }
+            Err(e) => {
+                // step-io fallback also failed — continue with empty geometry
+                let _ = e;
+            }
+        }
+    }
 
     let solid_groups = find_solid_face_groups(&entities);
 
