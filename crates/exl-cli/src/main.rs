@@ -301,7 +301,7 @@ fn convert(
                 let merged = if !fi_str.is_empty() && !fe_str.is_empty() {
                     format!("[\n{},\n{}\n]", fi_str, fe_str)
                 } else {
-                    format!("{}", if !fi_str.is_empty() { &fi_str } else { &fe_str })
+                    (if !fi_str.is_empty() { &fi_str } else { &fe_str }).to_string()
                 };
                 if !merged.is_empty() {
                     std::fs::write(rp, &merged)
