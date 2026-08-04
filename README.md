@@ -54,6 +54,12 @@ curl -L https://github.com/KryptosAI/breakform/releases/latest/download/bf-x86_6
 chmod +x bf && sudo mv bf /usr/local/bin/
 ```
 
+**Linux ARM (aarch64):**
+```bash
+curl -L https://github.com/KryptosAI/breakform/releases/latest/download/bf-aarch64-unknown-linux-gnu -o bf
+chmod +x bf && sudo mv bf /usr/local/bin/
+```
+
 **Windows:**
 ```powershell
 Invoke-WebRequest -Uri https://github.com/KryptosAI/breakform/releases/latest/download/bf-x86_64-pc-windows-msvc.exe -OutFile bf.exe
