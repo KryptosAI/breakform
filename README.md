@@ -33,6 +33,26 @@ Breakform provides a vendor-neutral interchange format for 3D geometry (mesh + B
 
 ## Quickstart
 
+### Binary download (recommended)
+
+Pre-built binaries for macOS (Intel + Apple Silicon) and Linux are on the [releases page](https://github.com/KryptosAI/breakform/releases):
+
+```bash
+# macOS (Apple Silicon)
+curl -L https://github.com/KryptosAI/breakform/releases/latest/download/bf-aarch64-apple-darwin -o bf
+chmod +x bf && sudo mv bf /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/KryptosAI/breakform/releases/latest/download/bf-x86_64-apple-darwin -o bf
+chmod +x bf && sudo mv bf /usr/local/bin/
+
+# Linux x86_64
+curl -L https://github.com/KryptosAI/breakform/releases/latest/download/bf-x86_64-unknown-linux-gnu -o bf
+chmod +x bf && sudo mv bf /usr/local/bin/
+```
+
+### Or build from source
+
 ```bash
 cargo build --release
 
