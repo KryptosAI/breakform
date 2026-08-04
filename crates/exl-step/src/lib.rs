@@ -1337,7 +1337,10 @@ pub fn import_step(path: &Path) -> Result<(Document, FidelityReport), StepError>
 
     if full_brep.faces.is_empty() && full_brep.edges.is_empty() && full_brep.vertices.is_empty() {
         let raw = content.as_bytes();
-        let fallback_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
+        let fallback_name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown");
         match step_io_fallback::import_step_io(raw, fallback_name) {
             Ok((parts, fid)) => {
                 let mut doc = Document::new(parts);

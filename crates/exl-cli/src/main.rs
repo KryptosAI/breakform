@@ -156,7 +156,10 @@ fn run_meshio_bridge(py_code: &str) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-fn import_via_meshio(input: &Path, output: &Path) -> Result<(Document, Option<exl_core::FidelityReport>), String> {
+fn import_via_meshio(
+    input: &Path,
+    output: &Path,
+) -> Result<(Document, Option<exl_core::FidelityReport>), String> {
     let exl_py_dir = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("crates")
@@ -185,20 +188,23 @@ print(json.dumps(result))
     let fid_val = result["fid"].clone();
     let _fid_str = serde_json::to_string(&fid_val).unwrap_or_default();
 
-    let fid: exl_core::FidelityReport = serde_json::from_value(fid_val)
-        .map_err(|e| format!("fidelity parse: {}", e))?;
+    let fid: exl_core::FidelityReport =
+        serde_json::from_value(fid_val).map_err(|e| format!("fidelity parse: {}", e))?;
 
     let doc_dict = &result["doc"];
-    let doc: Document = serde_json::from_value(doc_dict.clone())
-        .map_err(|e| format!("doc parse: {}", e))?;
+    let doc: Document =
+        serde_json::from_value(doc_dict.clone()).map_err(|e| format!("doc parse: {}", e))?;
 
-    exl_io::save(&doc, output)
-        .map_err(|e| format!("save failed: {}", e))?;
+    exl_io::save(&doc, output).map_err(|e| format!("save failed: {}", e))?;
 
     Ok((doc, Some(fid)))
 }
 
-fn export_via_meshio(input: &Path, output: &Path, format_hint: Option<&str>) -> Result<Option<exl_core::FidelityReport>, String> {
+fn export_via_meshio(
+    input: &Path,
+    output: &Path,
+    format_hint: Option<&str>,
+) -> Result<Option<exl_core::FidelityReport>, String> {
     let doc = load_native(input)?;
     let doc_dict = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
 
@@ -235,8 +241,8 @@ print(json.dumps(result))
         return Err(err.as_str().unwrap_or("unknown error").to_string());
     }
 
-    let fid: exl_core::FidelityReport = serde_json::from_value(result)
-        .map_err(|e| format!("fidelity parse: {}", e))?;
+    let fid: exl_core::FidelityReport =
+        serde_json::from_value(result).map_err(|e| format!("fidelity parse: {}", e))?;
 
     Ok(Some(fid))
 }
@@ -244,13 +250,35 @@ print(json.dumps(result))
 fn meshio_supported(ext: &str) -> bool {
     matches!(
         ext,
-        "iges" | "igs" | "vtk" | "vtu" | "xdmf"
-            | "ply" | "off" | "msh" | "gmsh"
-            | "cgns" | "tecplot" | "med" | "exodus"
-            | "su2" | "ugrid" | "h5m" | "ansys"
-            | "fro" | "neu" | "permas" | "abaqus"
-            | "fluent" | "nastran" | "gid" | "avsucd"
-            | "mdpa" | "p3d" | "svg" | "wkt"
+        "iges"
+            | "igs"
+            | "vtk"
+            | "vtu"
+            | "xdmf"
+            | "ply"
+            | "off"
+            | "msh"
+            | "gmsh"
+            | "cgns"
+            | "tecplot"
+            | "med"
+            | "exodus"
+            | "su2"
+            | "ugrid"
+            | "h5m"
+            | "ansys"
+            | "fro"
+            | "neu"
+            | "permas"
+            | "abaqus"
+            | "fluent"
+            | "nastran"
+            | "gid"
+            | "avsucd"
+            | "mdpa"
+            | "p3d"
+            | "svg"
+            | "wkt"
     )
 }
 
@@ -272,19 +300,14 @@ fn convert(
     let in_ext = extension(&input);
 
     if meshio && meshio_supported(in_ext) {
-        let intermediate = std::env::temp_dir().join(format!(
-            "bf_meshio_intermediate_{}.exl",
-            std::process::id()
-        ));
+        let intermediate =
+            std::env::temp_dir().join(format!("bf_meshio_intermediate_{}.exl", std::process::id()));
         let (doc, import_report) = import_via_meshio(&input, &intermediate)?;
 
         let out_ext_eff = export_format.as_deref().unwrap_or(extension(&output));
         if meshio_supported(out_ext_eff) || meshio_supported(extension(&output)) {
-            let export_report = export_via_meshio(
-                &intermediate,
-                &output,
-                export_format.as_deref(),
-            )?;
+            let export_report =
+                export_via_meshio(&intermediate, &output, export_format.as_deref())?;
 
             let fi_str = if let Some(ref ir) = import_report {
                 serde_json::to_string_pretty(&ir).unwrap_or_default()
@@ -327,7 +350,16 @@ fn convert(
             println!("converted {} -> {}", input.display(), output.display());
             println!("parts: {}", total_parts);
             println!("total vertices: {}, total faces: {}", vert_sum, face_sum);
-            println!("overall fidelity: {}", fidelity_label(if !fi_str.is_empty() { &fi_str } else if !fe_str.is_empty() { &fe_str } else { "" }));
+            println!(
+                "overall fidelity: {}",
+                fidelity_label(if !fi_str.is_empty() {
+                    &fi_str
+                } else if !fe_str.is_empty() {
+                    &fe_str
+                } else {
+                    ""
+                })
+            );
             let _ = std::fs::remove_file(&intermediate);
             return Ok(0);
         }

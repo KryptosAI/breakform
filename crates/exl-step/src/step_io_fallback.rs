@@ -10,8 +10,8 @@ pub fn import_step_io(
     source: &[u8],
     file_name: &str,
 ) -> Result<(Vec<Part>, FidelityReport), crate::StepError> {
-    let (model, _read_report) =
-        step_io::read(source).map_err(|e| crate::StepError::Parse(format!("step-io read: {}", e)))?;
+    let (model, _read_report) = step_io::read(source)
+        .map_err(|e| crate::StepError::Parse(format!("step-io read: {}", e)))?;
 
     let scene = model.scene();
 
@@ -31,7 +31,10 @@ pub fn import_step_io(
     }
 
     if parts.is_empty() {
-        parts.push(Part::new(file_name.to_string(), GeometryPayload::Brep(BRep::default())));
+        parts.push(Part::new(
+            file_name.to_string(),
+            GeometryPayload::Brep(BRep::default()),
+        ));
     }
 
     fid.record(
@@ -92,7 +95,11 @@ fn map_solid_to_brep(
                     control_points: nurbs.control_points,
                     knots_u: nurbs.knots_u,
                     knots_v: nurbs.knots_v,
-                    weights: if nurbs.weights.iter().any(|row| row.iter().any(|w| (*w - 1.0).abs() > 1e-12)) {
+                    weights: if nurbs
+                        .weights
+                        .iter()
+                        .any(|row| row.iter().any(|w| (*w - 1.0).abs() > 1e-12))
+                    {
                         Some(nurbs.weights)
                     } else {
                         None
@@ -160,10 +167,13 @@ fn map_solid_to_brep(
                 };
 
                 let dir = direction_from_points(start_pt, end_pt);
-                curve_params.insert(edge_id.clone(), CurveParams::Line {
-                    point: start_pt,
-                    direction: dir,
-                });
+                curve_params.insert(
+                    edge_id.clone(),
+                    CurveParams::Line {
+                        point: start_pt,
+                        direction: dir,
+                    },
+                );
 
                 edges.push(BrepEdge {
                     id: edge_id.clone(),
